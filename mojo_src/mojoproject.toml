@@ -1,0 +1,13 @@
+[project]
+authors = ["Dmitri Moscoglo <dmmoskoglo@gmail.com>"]
+channels = ["conda-forge", "https://conda.modular.com/max"]
+description = "Add a short description here"
+name = "mojo_src"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+max = ">=24.5.0,<25"
+scikit-learn = ">=1.5.2,<2"

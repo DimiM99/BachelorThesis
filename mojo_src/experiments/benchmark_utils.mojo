@@ -1,0 +1,112 @@
+from python import Python, PythonObject
+from sklmini_mo.utility.matrix import Matrix
+from memory import memcpy
+
+struct DatasetResult:
+    var X_train: Matrix
+    var X_test: Matrix
+    var y_train: PythonObject  # For KNN
+    var y_test: PythonObject   # For KNN
+    var y_train_mat: Matrix    # For Linear Regression
+    var y_test_mat: Matrix     # For Linear Regression
+
+    fn __init__(inout self):
+        self.X_train = Matrix(0, 0)
+        self.X_test = Matrix(0, 0)
+        self.y_train = None
+        self.y_test = None
+        self.y_train_mat = Matrix(0, 0)
+        self.y_test_mat = Matrix(0, 0)
+
+    fn __copyinit__(inout self, other: Self):
+        self.X_train = other.X_train
+        self.X_test = other.X_test
+        self.y_train = other.y_train
+        self.y_test = other.y_test
+        self.y_train_mat = other.y_train_mat
+        self.y_test_mat = other.y_test_mat
+        
+
+struct Datasets:
+    var iris: DatasetResult
+    var wine: DatasetResult
+    var california: DatasetResult
+    var diabetes: DatasetResult
+    var cancer: DatasetResult
+
+    fn __init__(inout self):
+        self.iris = DatasetResult()
+        self.wine = DatasetResult()
+        self.california = DatasetResult()
+        self.diabetes = DatasetResult()
+        self.cancer = DatasetResult()
+
+    fn __copyinit__(inout self, other: Self):
+        self.iris = other.iris
+        self.wine = other.wine
+        self.california = other.california
+        self.diabetes = other.diabetes
+        self.cancer = other.cancer
+
+fn load_real_datasets() raises -> Datasets:
+    var datasets = Datasets()
+    
+    var sklearn_datasets = Python.import_module("sklearn.datasets")
+    var sklearn_model_selection = Python.import_module("sklearn.model_selection")
+    
+    # California Housing dataset (regression)
+    print("Loading California Housing dataset...")
+    var california = sklearn_datasets.fetch_california_housing()
+    var california_split = sklearn_model_selection.train_test_split(
+        california.data, california.target, test_size=0.2, random_state=42
+    )
+    datasets.california.X_train = Matrix.from_numpy(california_split[0])
+    datasets.california.X_test = Matrix.from_numpy(california_split[1])
+    datasets.california.y_train_mat = Matrix.from_numpy(california_split[2].reshape(-1, 1))
+    datasets.california.y_test_mat = Matrix.from_numpy(california_split[3].reshape(-1, 1))
+
+    # Diabetes dataset (regression)
+    print("Loading Diabetes dataset...")
+    var diabetes = sklearn_datasets.load_diabetes()
+    var diabetes_split = sklearn_model_selection.train_test_split(
+        diabetes.data, diabetes.target, test_size=0.2, random_state=42
+    )
+    datasets.diabetes.X_train = Matrix.from_numpy(diabetes_split[0])
+    datasets.diabetes.X_test = Matrix.from_numpy(diabetes_split[1])
+    datasets.diabetes.y_train_mat = Matrix.from_numpy(diabetes_split[2].reshape(-1, 1))
+    datasets.diabetes.y_test_mat = Matrix.from_numpy(diabetes_split[3].reshape(-1, 1))
+
+    # Iris dataset (classification)
+    print("Loading Iris dataset...")
+    var iris = sklearn_datasets.load_iris()
+    var iris_split = sklearn_model_selection.train_test_split(
+        iris.data, iris.target, test_size=0.2, random_state=42
+    )
+    datasets.iris.X_train = Matrix.from_numpy(iris_split[0])
+    datasets.iris.X_test = Matrix.from_numpy(iris_split[1])
+    datasets.iris.y_train = iris_split[2]
+    datasets.iris.y_test = iris_split[3]
+
+    # Wine dataset (clustering/classification)
+    print("Loading Wine dataset...")
+    var wine = sklearn_datasets.load_wine()
+    var wine_split = sklearn_model_selection.train_test_split(
+        wine.data, wine.target, test_size=0.2, random_state=42
+    )
+    datasets.wine.X_train = Matrix.from_numpy(wine_split[0])
+    datasets.wine.X_test = Matrix.from_numpy(wine_split[1])
+    datasets.wine.y_train = wine_split[2]
+    datasets.wine.y_test = wine_split[3]
+    
+    # Breast Cancer dataset (classification)
+    print("Loading Breast Cancer dataset...")
+    var cancer = sklearn_datasets.load_breast_cancer()
+    var cancer_split = sklearn_model_selection.train_test_split(
+        cancer.data, cancer.target, test_size=0.2, random_state=42
+    )
+    datasets.cancer.X_train = Matrix.from_numpy(cancer_split[0])
+    datasets.cancer.X_test = Matrix.from_numpy(cancer_split[1])
+    datasets.cancer.y_train = cancer_split[2]
+    datasets.cancer.y_test = cancer_split[3]
+    
+    return datasets
