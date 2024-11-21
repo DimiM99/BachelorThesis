@@ -1,4 +1,3 @@
-# sklmini_mo/experiments/benchmarks.mojo
 from time import now
 from python import Python, PythonObject
 from sklmini_mo.utility.matrix import Matrix
