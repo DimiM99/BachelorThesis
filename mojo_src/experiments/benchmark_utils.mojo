@@ -5,26 +5,20 @@ from memory import memcpy
 struct DatasetResult:
     var X_train: Matrix
     var X_test: Matrix
-    var y_train: PythonObject  # For KNN
-    var y_test: PythonObject   # For KNN
-    var y_train_mat: Matrix    # For Linear Regression
-    var y_test_mat: Matrix     # For Linear Regression
+    var y_train: Matrix
+    var y_test: Matrix
 
     fn __init__(inout self):
         self.X_train = Matrix(0, 0)
         self.X_test = Matrix(0, 0)
-        self.y_train = None
-        self.y_test = None
-        self.y_train_mat = Matrix(0, 0)
-        self.y_test_mat = Matrix(0, 0)
+        self.y_train = Matrix(0, 0)
+        self.y_test = Matrix(0, 0)
 
     fn __copyinit__(inout self, other: Self):
         self.X_train = other.X_train
         self.X_test = other.X_test
         self.y_train = other.y_train
         self.y_test = other.y_test
-        self.y_train_mat = other.y_train_mat
-        self.y_test_mat = other.y_test_mat
         
 
 struct Datasets:
@@ -62,8 +56,8 @@ fn load_real_datasets() raises -> Datasets:
     )
     datasets.california.X_train = Matrix.from_numpy(california_split[0])
     datasets.california.X_test = Matrix.from_numpy(california_split[1])
-    datasets.california.y_train_mat = Matrix.from_numpy(california_split[2].reshape(-1, 1))
-    datasets.california.y_test_mat = Matrix.from_numpy(california_split[3].reshape(-1, 1))
+    datasets.california.y_train = Matrix.from_numpy(california_split[2].reshape(-1, 1))
+    datasets.california.y_test = Matrix.from_numpy(california_split[3].reshape(-1, 1))
 
     # Diabetes dataset (regression)
     print("Loading Diabetes dataset...")
@@ -73,8 +67,8 @@ fn load_real_datasets() raises -> Datasets:
     )
     datasets.diabetes.X_train = Matrix.from_numpy(diabetes_split[0])
     datasets.diabetes.X_test = Matrix.from_numpy(diabetes_split[1])
-    datasets.diabetes.y_train_mat = Matrix.from_numpy(diabetes_split[2].reshape(-1, 1))
-    datasets.diabetes.y_test_mat = Matrix.from_numpy(diabetes_split[3].reshape(-1, 1))
+    datasets.diabetes.y_train = Matrix.from_numpy(diabetes_split[2].reshape(-1, 1))
+    datasets.diabetes.y_test = Matrix.from_numpy(diabetes_split[3].reshape(-1, 1))
 
     # Iris dataset (classification)
     print("Loading Iris dataset...")
@@ -84,8 +78,8 @@ fn load_real_datasets() raises -> Datasets:
     )
     datasets.iris.X_train = Matrix.from_numpy(iris_split[0])
     datasets.iris.X_test = Matrix.from_numpy(iris_split[1])
-    datasets.iris.y_train = iris_split[2]
-    datasets.iris.y_test = iris_split[3]
+    datasets.iris.y_train = Matrix.from_numpy(iris_split[2].reshape(-1, 1))
+    datasets.iris.y_test = Matrix.from_numpy(iris_split[3].reshape(-1, 1))
 
     # Wine dataset (clustering/classification)
     print("Loading Wine dataset...")
@@ -95,8 +89,8 @@ fn load_real_datasets() raises -> Datasets:
     )
     datasets.wine.X_train = Matrix.from_numpy(wine_split[0])
     datasets.wine.X_test = Matrix.from_numpy(wine_split[1])
-    datasets.wine.y_train = wine_split[2]
-    datasets.wine.y_test = wine_split[3]
+    datasets.wine.y_train = Matrix.from_numpy(wine_split[2].reshape(-1, 1))
+    datasets.wine.y_test = Matrix.from_numpy(wine_split[3].reshape(-1, 1))
     
     # Breast Cancer dataset (classification)
     print("Loading Breast Cancer dataset...")
@@ -106,7 +100,7 @@ fn load_real_datasets() raises -> Datasets:
     )
     datasets.cancer.X_train = Matrix.from_numpy(cancer_split[0])
     datasets.cancer.X_test = Matrix.from_numpy(cancer_split[1])
-    datasets.cancer.y_train = cancer_split[2]
-    datasets.cancer.y_test = cancer_split[3]
+    datasets.cancer.y_train = Matrix.from_numpy(cancer_split[2].reshape(-1, 1))
+    datasets.cancer.y_test = Matrix.from_numpy(cancer_split[3].reshape(-1, 1))
     
     return datasets

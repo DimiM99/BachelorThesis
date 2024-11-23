@@ -67,7 +67,7 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
         )
         
         var fit_start = now()
-        model.fit(datasets.california.X_train, datasets.california.y_train_mat)
+        model.fit(datasets.california.X_train, datasets.california.y_train)
         var fit_time = (now() - fit_start) / 1e9
         results.california_lr.fit_times.append(fit_time)
         
@@ -76,8 +76,8 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
         var predict_time = (now() - predict_start) / 1e9
         results.california_lr.predict_times.append(predict_time)
         
-        var mse_val = mse(datasets.california.y_test_mat, y_pred)
-        var r2_val = r2_score(datasets.california.y_test_mat, y_pred)
+        var mse_val = mse(datasets.california.y_test, y_pred)
+        var r2_val = r2_score(datasets.california.y_test, y_pred)
         if i == 0:  # Store metrics from first run
             results.california_lr.metrics["mse"] = mse_val
             results.california_lr.metrics["r2"] = r2_val
@@ -93,7 +93,7 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
         )
         
         var fit_start = now()
-        model.fit(datasets.diabetes.X_train, datasets.diabetes.y_train_mat)
+        model.fit(datasets.diabetes.X_train, datasets.diabetes.y_train)
         var fit_time = (now() - fit_start) / 1e9
         results.diabetes_lr.fit_times.append(fit_time)
         
@@ -102,8 +102,8 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
         var predict_time = (now() - predict_start) / 1e9
         results.diabetes_lr.predict_times.append(predict_time)
         
-        var mse_val = mse(datasets.diabetes.y_test_mat, y_pred)
-        var r2_val = r2_score(datasets.diabetes.y_test_mat, y_pred)
+        var mse_val = mse(datasets.diabetes.y_test, y_pred)
+        var r2_val = r2_score(datasets.diabetes.y_test, y_pred)
         if i == 0:  # Store metrics from first run
             results.diabetes_lr.metrics["mse"] = mse_val
             results.diabetes_lr.metrics["r2"] = r2_val
