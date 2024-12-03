@@ -6,6 +6,7 @@ from algorithm.reduction import sum, cumsum, argmin, argmax
 from collections import InlinedFixedVector, Dict
 import math
 import random
+from random import random_float64
 from sklmini_mo.utility.utils import cov_value, gauss_jordan, add, sub, mul, div
 from sklmini_mo.utility import matmul
 from python import Python, PythonObject
@@ -20,7 +21,7 @@ struct Matrix(Stringable, Formattable):
 
     # initialize from UnsafePointer
     @always_inline
-    fn __init__(inout self, height: Int, width: Int, data: UnsafePointer[Float32] = UnsafePointer[Float32](), order: String = 'c'):
+    fn __init__(inout self, height: Int, width: Int, data: UnsafePointer[Float32] = UnsafePointer[Float32](), order: String = 'c', rand: Bool = False):
         self.height = height
         self.width = width
         self.size = height * width
@@ -28,6 +29,9 @@ struct Matrix(Stringable, Formattable):
         self.order = order.lower()
         if data:
             memcpy(self.data, data, self.size)
+        if rand:
+            for i in range(self.size):
+                self.data[i] = random_float64().cast[DType.float32]()
 
     # initialize from List
     fn __init__(inout self, height: Int, width: Int, def_input: List[Float32]):
