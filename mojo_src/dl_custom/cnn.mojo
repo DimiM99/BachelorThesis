@@ -1,9 +1,10 @@
-from sklmini_mo.utility.utils import Matrix, ReLu, ReLu_Deriv, softmax, sigmoid
+from sklmini_mo.utility.utils import Matrix, ReLu, ReLu_Deriv, softmax, sigmoid, accuracy_score
 
 struct SimpleNN:
     var input_size: Int
     var hidden_size: Int 
     var output_size: Int
+    var debug: Bool
     var W1: Matrix
     var b1: Matrix 
     var W2: Matrix
@@ -15,10 +16,11 @@ struct SimpleNN:
     var Z2: Matrix 
     var A2: Matrix
 
-    fn __init__(inout self, input_size: Int = 784, hidden_size: Int = 10, output_size: Int = 10):
+    fn __init__(inout self, input_size: Int = 784, hidden_size: Int = 10, output_size: Int = 10, debug: Bool = False):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
+        self.debug = debug
         
         # Initialize with random weights - 0.5 
         self.W1 = Matrix(self.hidden_size, self.input_size, rand = True) - 0.5
@@ -65,14 +67,7 @@ struct SimpleNN:
         return A2.argmax(0)
 
     fn get_accuracy(self, predictions: Matrix, Y: Matrix) raises -> Float32:
-        # Create a comparison matrix where 1.0 represents matches and 0.0 represents mismatches
-        var comparison = Matrix.zeros(predictions.size, 1)
-        for i in range(predictions.size):
-            comparison.data[i] = Float32(1.0) if predictions.data[i] == Y.data[i] else 0.0
-        
-        # Use where to convert boolean comparison to 1.0/0.0 values
-        var matches = comparison.where(comparison > 0.0, 1.0, 0.0)
-        return matches.sum() / Y.size
+        return accuracy_score(Y, predictions)
 
     fn fit(inout self, X_train: Matrix, Y_train: Matrix, learning_rate: Float32 = 0.1, epochs: Int = 100) raises:
         var m = X_train.width
