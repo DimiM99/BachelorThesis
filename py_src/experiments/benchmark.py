@@ -8,6 +8,7 @@ import sys
 sys.path.append('../')
 from sklmini_py import KMeans, KNeighborsClassifier, LinearRegression
 from experiments.benchmark_data import load_real_datasets, Datasets
+from dl_custom.cnn import SimpleNN
 
 @dataclass
 class BenchmarkResult:
@@ -27,6 +28,7 @@ class BenchmarkResults:
     iris_knn: BenchmarkResult
     cancer_knn: BenchmarkResult
     wine_kmeans: BenchmarkResult
+    mnist_nn: BenchmarkResult
 
     def __init__(self):
         self.california_lr = BenchmarkResult()
@@ -34,6 +36,7 @@ class BenchmarkResults:
         self.iris_knn = BenchmarkResult()
         self.cancer_knn = BenchmarkResult()
         self.wine_kmeans = BenchmarkResult()
+        self.mnist_nn = BenchmarkResult()
 
 def calculate_inertia(X: np.ndarray, labels: np.ndarray, centroids: np.ndarray) -> float:
     inertia = 0.0
@@ -152,6 +155,33 @@ def run_benchmarks(n_runs: int = 5) -> BenchmarkResults:
         if i == 0:  # Store metrics from first run
             results.wine_kmeans.metrics["inertia"] = inertia
 
+    print("\nBenchmarking Simple Neural Network on MNIST...")
+    for i in range(n_runs):
+        print(f"Run {i + 1} of {n_runs}")
+        model = SimpleNN(input_size=784, hidden_size=10, output_size=10)
+
+        fit_start = time.time()
+        model.fit(
+            datasets.mnist.X_train, 
+            datasets.mnist.y_train, 
+            learning_rate=0.1, 
+            epochs=500
+        )
+        fit_time = time.time() - fit_start
+        results.mnist_nn.fit_times.append(fit_time)
+
+        predict_start = time.time()
+        accuracy = model.evaluate(datasets.mnist.X_test, datasets.mnist.y_test)
+        print(f"Accuracy: {accuracy:.4f}")
+        predict_time = time.time() - predict_start
+        results.mnist_nn.predict_times.append(predict_time)
+
+        if i == 0:  # Store metrics from first run
+            results.mnist_nn.metrics["accuracy"] = accuracy
+
+
+    print("\nBenchmarking complete!")
+
     return results
 
 def print_results(results: BenchmarkResults, n_runs: int):
@@ -184,6 +214,11 @@ def print_results(results: BenchmarkResults, n_runs: int):
     print(f"Average Predict Time: {np.mean(results.wine_kmeans.predict_times):.6f} seconds")
     print(f"Inertia: {results.wine_kmeans.metrics['inertia']:.6f}")
 
+    print("\nMNIST - Simple Neural Network:")
+    print(f"Average Fit Time: {np.mean(results.mnist_nn.fit_times):.6f} seconds")
+    print(f"Average Predict Time: {np.mean(results.mnist_nn.predict_times):.6f} seconds")
+    print(f"Accuracy: {results.mnist_nn.metrics['accuracy']:.6f}")
+
     print("\n=== Timing Variations ===")
     print("\nCalifornia Housing - Linear Regression:")
     print(f"Fit Time Std: {np.std(results.california_lr.fit_times):.6f}")
@@ -204,3 +239,8 @@ def print_results(results: BenchmarkResults, n_runs: int):
     print("\nWine - KMeans:")
     print(f"Fit Time Std: {np.std(results.wine_kmeans.fit_times):.6f}")
     print(f"Predict Time Std: {np.std(results.wine_kmeans.predict_times):.6f}")
+
+    print("\nMNIST - Simple Neural Network:")
+    print(f"Fit Time Std: {np.std(results.mnist_nn.fit_times):.6f}")
+    print(f"Predict Time Std: {np.std(results.mnist_nn.predict_times):.6f}")
+

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from sklearn.datasets import (load_iris, load_wine, load_breast_cancer,
                             load_diabetes, fetch_california_housing)
 from sklearn.model_selection import train_test_split
@@ -21,6 +22,7 @@ class Datasets:
     wine: DatasetResult
     diabetes: DatasetResult
     cancer: DatasetResult
+    mnist: DatasetResult
 
 def load_real_datasets() -> Datasets:
     # California Housing dataset (regression)
@@ -92,10 +94,44 @@ def load_real_datasets() -> Datasets:
         y_test=y_test
     )
 
+    print("Loading MNIST Digits Dataset...")
+    print("Checking if dataset is already downloaded...")
+    try:
+        data = pd.read_csv("mnist.csv")
+        print("Dataset loaded from a local copy.")
+    except FileNotFoundError:
+        print("Dataset is not found. Downloading from the GCS Bucket... (may take a while)")
+        data =pd.read_csv("https://storage.googleapis.com/mnist-test-mojo-ba/mnist.csv")
+        data.to_csv("mnist.csv", index=False)
+    mnist = np.array(data)
+    m, n = mnist.shape
+    np.random.shuffle(mnist)
+    split_idx = 1000
+
+    data_test = mnist[0:split_idx].T
+    Y_test = data_test[0]
+    X_test = data_test[1:n]
+    X_test = X_test / 255.
+
+    data_train = mnist[split_idx:m].T
+    Y_train = data_train[0]
+    X_train = data_train[1:n]
+    X_train = X_train / 255.
+
+    mnist_result = DatasetResult(
+        X_train=X_train,
+        X_test=X_test,
+        y_train=Y_train,
+        y_test=Y_test
+    )
+
+    print("Datasets loaded.")
+
     return Datasets(
         california=california_result,
         iris=iris_result,
         wine=wine_result,
         diabetes=diabetes_result,
-        cancer=cancer_result
+        cancer=cancer_result,
+        mnist=mnist_result
     )
