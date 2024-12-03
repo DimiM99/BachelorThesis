@@ -2,10 +2,11 @@ import numpy as np
 import pandas as pd
 
 class SimpleNN:
-    def __init__(self, input_size=784, hidden_size=10, output_size=10):
+    def __init__(self, input_size=784, hidden_size=10, output_size=10, debug=False):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
+        self.debug = debug
         self.W1, self.b1, self.W2, self.b2 = self._init_params()
 
     def _init_params(self):
@@ -75,7 +76,7 @@ class SimpleNN:
             # Update parameters
             self.update_params(dW1, db1, dW2, db2, learning_rate)
 
-            if epoch % 10 == 0:
+            if self.debug and epoch % 10 == 0:
                 predictions = self.get_predictions(A2)
                 accuracy = self.get_accuracy(predictions, Y_train)
                 print(f"Epoch: {epoch}, Accuracy: {accuracy:.4f}")
@@ -90,7 +91,16 @@ class SimpleNN:
 
 # Example usage:
 def prepare_data(data_path):
-    data = np.array(pd.read_csv(data_path))
+    print("Loading MNIST Digits Dataset...")
+    print("Checking if dataset is already downloaded...")
+    try:
+        data = pd.read_csv("mnist.csv")
+        print("Dataset loaded from a local copy.")
+    except FileNotFoundError:
+        print("Dataset is not found. Downloading from the GCS Bucket... (may take a while)")
+        data =pd.read_csv("https://storage.googleapis.com/mnist-test-mojo-ba/mnist.csv")
+        data.to_csv("mnist.csv", index=False)
+
     m, n = data.shape
     np.random.shuffle(data)
 
@@ -113,7 +123,7 @@ def prepare_data(data_path):
 
 if __name__ == "__main__":
     # Load and prepare data
-    X_train, Y_train, X_val, Y_val = prepare_data('../experiments/mnist.csv')
+    X_train, Y_train, X_val, Y_val = prepare_data('https://storage.googleapis.com/mnist-test-mojo-ba/mnist.csv')
 
     # Create and train model
     model = SimpleNN(input_size=784, hidden_size=10, output_size=10)
