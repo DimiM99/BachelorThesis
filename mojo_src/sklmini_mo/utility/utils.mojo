@@ -250,6 +250,15 @@ fn ReLu(z: Matrix) -> Matrix:
     return z.where(z > 0.0, z, 0.0)
 
 @always_inline
+fn ReLu_Deriv(Z: Matrix) -> Matrix:
+    return Z.where(Z > 0.0, 1.0, 0.0)
+
+@always_inline
+fn softmax(Z: Matrix) -> Matrix:
+    var exp_Z = Z.exp()
+    return exp_Z / exp_Z.sum()
+
+@always_inline
 fn polynomial_kernel(params: Tuple[Float32, Int], X: Matrix, Z: Matrix) raises -> Matrix:
     return (params[0] + X * Z.T()) ** params[1] #(c + X.y)^degree
 
