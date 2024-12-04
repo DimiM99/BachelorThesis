@@ -6,6 +6,7 @@ from sklmini_mo.models.KNN import KNN
 from sklmini_mo.models.KMeans import KMeans
 from sklmini_mo.models.LinearRegression import LinearRegression
 from experiments.benchmark_utils import Datasets, load_real_datasets
+from dl_custom.cnn import SimpleNN
 
 struct BenchmarkResult:
     var fit_times: PythonObject
@@ -28,6 +29,7 @@ struct BenchmarkResults:
     var iris_knn: BenchmarkResult
     var cancer_knn: BenchmarkResult
     var wine_kmeans: BenchmarkResult
+    var mnist_simplenn: BenchmarkResult
 
     fn __init__(inout self):
         self.california_lr = BenchmarkResult()
@@ -35,6 +37,7 @@ struct BenchmarkResults:
         self.iris_knn = BenchmarkResult()
         self.cancer_knn = BenchmarkResult()
         self.wine_kmeans = BenchmarkResult()
+        self.mnist_simplenn = BenchmarkResult()
 
     fn __copyinit__(inout self, other: Self):
         self.california_lr = other.california_lr
@@ -42,6 +45,7 @@ struct BenchmarkResults:
         self.iris_knn = other.iris_knn
         self.cancer_knn = other.cancer_knn
         self.wine_kmeans = other.wine_kmeans
+        self.mnist_simplenn = other.mnist_simplenn
 
 fn calculate_inertia(X: Matrix, labels: Matrix, centroids: Matrix) raises -> Float32:
     var inertia: Float32 = 0.0
@@ -55,6 +59,7 @@ fn calculate_inertia(X: Matrix, labels: Matrix, centroids: Matrix) raises -> Flo
 fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
     var results = BenchmarkResults()
     var datasets = load_real_datasets()
+    print("Starting benchmarks...")
     
     # Linear Regression - California Housing
     print("\nBenchmarking Linear Regression on California Housing...")
@@ -168,6 +173,26 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
         if i == 0:  # Store metrics from first run
             results.wine_kmeans.metrics["inertia"] = inertia
     
+    # SimpleNN - MNIST
+    print("\nBenchmarking SimpleNN on MNIST dataset...")
+    for i in range(n_runs):
+        print("Run", i + 1, "of", n_runs)
+        var model = SimpleNN(input_size=784, hidden_size=128, output_size=10)
+        
+        var fit_start = now()
+        model.fit(datasets.mnist.X_train, datasets.mnist.y_train, 
+                 learning_rate=0.1, epochs=500)
+        var fit_time = (now() - fit_start) / 1e9
+        results.mnist_simplenn.fit_times.append(fit_time)
+        
+        var predict_start = now()
+        var accuracy = model.evaluate(datasets.mnist.X_test, datasets.mnist.y_test)
+        var predict_time = (now() - predict_start) / 1e9
+        results.mnist_simplenn.predict_times.append(predict_time)
+        
+        if i == 0:  # Store metrics from first run
+            results.mnist_simplenn.metrics["accuracy"] = accuracy
+
     return results
 
 fn print_results(results: BenchmarkResults, n_runs: Int) raises:
@@ -202,6 +227,11 @@ fn print_results(results: BenchmarkResults, n_runs: Int) raises:
     print("Average Predict Time:", np.mean(results.wine_kmeans.predict_times), "seconds")
     print("Inertia:", results.wine_kmeans.metrics["inertia"])
 
+    print("\nMNIST - Neural Network:")
+    print("Average Fit Time:", np.mean(results.mnist_simplenn.fit_times), "seconds")
+    print("Average Predict Time:", np.mean(results.mnist_simplenn.predict_times), "seconds")
+    print("Accuracy:", results.mnist_simplenn.metrics["accuracy"])
+    
     # Print standard deviations
     print("\n=== Timing Variations ===")
     print("\nCalifornia Housing - Linear Regression:")
@@ -223,3 +253,7 @@ fn print_results(results: BenchmarkResults, n_runs: Int) raises:
     print("\nWine - KMeans:")
     print("Fit Time Std:", np.std(results.wine_kmeans.fit_times))
     print("Predict Time Std:", np.std(results.wine_kmeans.predict_times))
+
+    print("\nMNIST - Neural Network:")
+    print("Fit Time Std:", np.std(results.mnist_simplenn.fit_times))
+    print("Predict Time Std:", np.std(results.mnist_simplenn.predict_times))
