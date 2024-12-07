@@ -27,6 +27,7 @@ struct Datasets:
     var california: DatasetResult
     var diabetes: DatasetResult
     var cancer: DatasetResult
+    var mnist: DatasetResult 
 
     fn __init__(inout self):
         self.iris = DatasetResult()
@@ -34,6 +35,7 @@ struct Datasets:
         self.california = DatasetResult()
         self.diabetes = DatasetResult()
         self.cancer = DatasetResult()
+        self.mnist = DatasetResult()
 
     fn __copyinit__(inout self, other: Self):
         self.iris = other.iris
@@ -41,11 +43,15 @@ struct Datasets:
         self.california = other.california
         self.diabetes = other.diabetes
         self.cancer = other.cancer
+        self.mnist = other.mnist
 
 fn load_real_datasets() raises -> Datasets:
+    print("Loading the datasets...")
     var datasets = Datasets()
     
     var sklearn_datasets = Python.import_module("sklearn.datasets")
+    var pd = Python.import_module("pandas")
+    var np = Python.import_module("numpy")
     var sklearn_model_selection = Python.import_module("sklearn.model_selection")
     
     # California Housing dataset (regression)
@@ -102,5 +108,40 @@ fn load_real_datasets() raises -> Datasets:
     datasets.cancer.X_test = Matrix.from_numpy(cancer_split[1])
     datasets.cancer.y_train = Matrix.from_numpy(cancer_split[2].reshape(-1, 1))
     datasets.cancer.y_test = Matrix.from_numpy(cancer_split[3].reshape(-1, 1))
+
+    # MNIST dataset (classification)
+    print("Loading MNIST Digits Dataset...")
+    print("Checking if dataset is already downloaded...")
+    var data: PythonObject = pd.DataFrame()
+    try:
+        data = pd.read_csv("mnist.csv")
+        print("Dataset loaded from a local copy.")
+    except:
+        print("Dataset is not found. Downloading from the GCS Bucket... (may take a while)")
+        data = pd.read_csv("https://storage.googleapis.com/mnist-test-mojo-ba/mnist.csv")
+        data.to_csv("mnist.csv", index = False)
+        print("Dataset downloaded and saved to the local directory.")
+    np_data = np.array(data)
+    var mnist = Matrix.from_numpy(np_data)
+    var m = mnist.height
+    var n = mnist.width
+    var split_idx = 1000
+
+    data_test = mnist[0:split_idx, :].T()
+    Y_test = data_test[0]
+    X_test = data_test[1:n, :]
+    X_test = X_test / 255
+
+    data_train = mnist[split_idx:m, :].T()
+    Y_train = data_train[0]
+    X_train = data_train[1:n, :]
+    X_train = X_train / 255
+
+    datasets.mnist.X_train = X_train
+    datasets.mnist.X_test = X_test
+    datasets.mnist.y_train = Y_train
+    datasets.mnist.y_test = Y_test
+
     
+    print("Datasets loaded.")
     return datasets
