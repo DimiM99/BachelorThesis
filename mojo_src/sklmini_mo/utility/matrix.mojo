@@ -246,7 +246,87 @@ struct Matrix(Stringable, Formattable):
         for i in range(mat.width):
             mat[row, i] = self[row, columns[i]]
         return mat^
-    
+
+    # Slicing (numpy style)
+    @always_inline
+    fn __getitem__(self, owned row_slice: Slice, col: Int) -> Self:
+        return self.__getitem__(row_slice, slice(col,col+1))
+
+    @always_inline
+    fn __getitem__(self, row: Int, owned col_slice: Slice) -> Self:
+        return self.__getitem__(slice(row,row+1),col_slice)
+
+    @always_inline
+    fn __getitem__(self, owned row_slice: Slice, owned col_slice: Slice) -> Self:
+        self._adjust_row_slice_(row_slice)
+        self._adjust_col_slice_(col_slice)
+
+        var row_length = self.get_slice_length(row_slice)
+        var col_length = self.get_slice_length(col_slice, 'col')
+        
+        var dest_mat = Self(row_length, col_length)
+        
+        alias simd_width: Int = self.simd_width
+        
+        # Calculate the actual indices for the slices
+        var row_start = row_slice.start.value()
+        var col_start = col_slice.start.value()
+        var step = col_slice.step if col_slice.step else 1
+
+        for idx_rows in range(row_length):
+            var src_ptr = self.data.offset((row_start + idx_rows) * self.width + col_start)
+            @parameter
+            fn slice_col_vectorize[simd_width: Int](idx: Int) -> None:
+                if idx + simd_width <= col_length:
+                    dest_mat.data.store[width=simd_width](
+                        idx + idx_rows * col_length,
+                        src_ptr.load[width=simd_width](step)
+                    )
+                else:
+                    # Handle remaining elements
+                    for j in range(idx, col_length):
+                        dest_mat.data[idx + idx_rows * col_length] = src_ptr.load[width=1](j * step)
+            
+            vectorize[slice_col_vectorize, simd_width](col_length)
+        
+        return dest_mat
+
+    @always_inline
+    fn _adjust_row_slice_(self, inout span: Slice):
+        if not span.start:
+            span.start = 0
+        if span.start.value() < 0:
+            span.start = self.height + span.start.value()    
+        if not span.end:
+            span.end = self.height
+        elif span.end.value() < 0:
+            span.end = self.height + span.end.value()
+        if span.end.value() > self.height:
+            span.end = self.height
+
+    @always_inline
+    fn _adjust_col_slice_(self, inout span: Slice):
+        if not span.start:
+            span.start = 0
+        if span.start.value() < 0:
+            span.start = self.width + span.start.value()
+        if not span.end:
+            span.end = self.width
+        elif span.end.value() < 0:
+            span.end = self.width + span.end.value()
+        if span.end.value() > self.width:
+            span.end = self.width
+
+    @always_inline
+    fn get_slice_length(self, span: Slice, type: String = 'row') -> Int:
+        var start = span.start.value() if span.start else 0
+        var end: Int
+        if type == 'row':
+            end = span.end.value() if span.end else self.height
+        else:  # col
+            end = span.end.value() if span.end else self.width
+        return end - start
+
     # replace an element
     @always_inline
     fn __setitem__(inout self, row: Int, column: Int, val: Float32) raises:
