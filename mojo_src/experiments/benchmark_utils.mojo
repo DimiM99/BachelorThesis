@@ -114,11 +114,11 @@ fn load_real_datasets() raises -> Datasets:
     print("Checking if dataset is already downloaded...")
     var data: PythonObject = pd.DataFrame()
     try:
-        data = pd.read_csv("mnist.csv")
+        data = pd.read_csv("mnist.csv", index_col=False)
         print("Dataset loaded from a local copy.")
     except:
         print("Dataset is not found. Downloading from the GCS Bucket... (may take a while)")
-        data = pd.read_csv("https://storage.googleapis.com/mnist-test-mojo-ba/mnist.csv")
+        data = pd.read_csv("https://storage.googleapis.com/mnist-test-mojo-ba/mnist.csv", index_col=False)
         data.to_csv("mnist.csv", index = False)
         print("Dataset downloaded and saved to the local directory.")
     np_data = np.array(data)
