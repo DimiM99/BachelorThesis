@@ -122,20 +122,20 @@ fn load_real_datasets() raises -> Datasets:
         data.to_csv("mnist.csv", index = False)
         print("Dataset downloaded and saved to the local directory.")
     np_data = np.array(data)
+    
     var mnist = Matrix.from_numpy(np_data)
     var m = mnist.height
     var n = mnist.width
     var split_idx = 1000
 
-    data_test = mnist[0:split_idx, :].T()
-    Y_test = data_test[0]
-    X_test = data_test[1:n, :]
-    X_test = X_test / 255
+    var data_test = mnist.get_slice(0, split_idx).T()
+    var data_train = mnist.get_slice(split_idx, m).T()
 
-    data_train = mnist[split_idx:m, :].T()
+    Y_test = data_test[0]
+    X_test = data_test.get_slice(1, n) / 255.0
+
     Y_train = data_train[0]
-    X_train = data_train[1:n, :]
-    X_train = X_train / 255
+    X_train = data_train.get_slice(1, n) / 255.0
 
     datasets.mnist.X_train = X_train
     datasets.mnist.X_test = X_test
