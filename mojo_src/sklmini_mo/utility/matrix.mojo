@@ -248,6 +248,7 @@ struct Matrix(Stringable, Formattable):
         return mat^
 
     # Slicing (numpy style)
+    # TODO: Fix the slicing Currently, it is not working as expected
     @always_inline
     fn __getitem__(self, owned row_slice: Slice, col: Int) -> Self:
         return self.__getitem__(row_slice, slice(col,col+1))
@@ -326,6 +327,23 @@ struct Matrix(Stringable, Formattable):
         else:  # col
             end = span.end.value() if span.end else self.width
         return end - start
+
+    # altenative slicing (rows only)
+    @always_inline
+    fn get_slice(self, start: Int, end: Int) raises -> Matrix:
+        if start >= self.height or end > self.height:
+            raise Error("Slice indices out of range")
+            
+        var mat = Matrix(end - start, self.width)
+        if self.order == 'c':
+            for i in range(end - start):
+                for j in range(self.width):
+                    mat.data[i * self.width + j] = self.data[(i + start) * self.width + j]
+        else:
+            for i in range(end - start):
+                for j in range(self.width):
+                    mat.data[i * self.width + j] = self.data[(i + start) + j * self.height]
+        return mat^
 
     # replace an element
     @always_inline
@@ -1523,16 +1541,24 @@ struct Matrix(Stringable, Formattable):
     @staticmethod
     fn from_numpy(np_arr: PythonObject, order: String = 'c') raises -> Matrix:
         var np = Python.import_module("numpy")
-        var np_arr_f = np.array(np_arr, dtype= 'f', order= order.upper())
+        # Ensure contiguous array with correct type and order
+        var np_arr_f = np.ascontiguousarray(np_arr, dtype='float32')
+        
+        # Get dimensions
         var height = int(np_arr_f.shape[0])
-        var width = 0
-        try:
+        var width = 1
+        if len(np_arr_f.shape) > 1:
             width = int(np_arr_f.shape[1])
-        except:
-            width = height
-            height = 1
-        var mat = Matrix(height, width, np_arr_f.__array_interface__['data'][0].unsafe_get_as_pointer[DType.float32](), order)
-        _ = np_arr_f.__array_interface__['data'][0].__index__()
+        
+        # Create new Matrix with proper dimensions
+        var mat = Matrix(height, width, order=order)
+        
+        # Get pointer to numpy array data
+        var data_ptr = np_arr_f.__array_interface__['data'][0].unsafe_get_as_pointer[DType.float32]()
+        
+        # Copy data
+        memcpy(mat.data, data_ptr, height * width)
+        
         return mat^
 
     fn to_numpy(self) raises -> PythonObject:
