@@ -177,7 +177,7 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
     print("\nBenchmarking SimpleNN on MNIST dataset...")
     for i in range(n_runs):
         print("Run", i + 1, "of", n_runs)
-        var model = SimpleNN(input_size=784, hidden_size=128, output_size=10)
+        var model = SimpleNN(input_size=784, hidden_size=10, output_size=10, debug=True)
         
         var fit_start = now()
         model.fit(datasets.mnist.X_train, datasets.mnist.y_train, 
