@@ -880,14 +880,14 @@ struct Matrix(Stringable, Formattable):
         return mat^
     
     @always_inline
-    fn T(self) -> Matrix:
+    fn T(self) raises -> Matrix:
         if self.height == 1 or self.width == 1:
             return self.reshape(self.width, self.height)
         if self.order == 'c':
             return self.C_transpose()
         return self.F_transpose()
 
-    fn asorder(self, order: String) -> Matrix:
+    fn asorder(self, order: String) raises -> Matrix:
         _order = order.lower()
         if _order == self.order:
             return self
@@ -1262,10 +1262,47 @@ struct Matrix(Stringable, Formattable):
         return mat^
 
     @always_inline
-    fn reshape(self, height: Int, width: Int) -> Matrix:
-        var mat: Matrix = self
-        mat.height = height
-        mat.width = width
+    fn reshape(self, height: Int, width: Int) raises -> Matrix:
+        """Reshape with one dimension automatically calculated."""
+        if height == -1:
+            if self.size % width != 0:
+                raise Error("Cannot reshape: incompatible dimensions")
+            return self._reshape(self.size // width, width)
+        elif width == -1:
+            if self.size % height != 0:
+                raise Error("Cannot reshape: incompatible dimensions")
+            return self._reshape(height, self.size // height)
+        else:
+            return self._reshape(height, width)
+
+    fn _reshape(self, height: Int, width: Int) raises -> Matrix:
+        """Reshape matrix to new dimensions while preserving data."""
+        # Check if reshape is valid
+        if height * width != self.size:
+            raise Error("Cannot reshape array of size " + str(self.size) + 
+                    " into shape (" + str(height) + ", " + str(width) + ")")
+        
+        # Create new matrix with desired shape
+        var mat = Matrix(height, width, order=self.order)
+        
+        # Copy data preserving order
+        if self.order == 'c':
+            # Row-major order
+            for i in range(self.size):
+                var old_row = i // self.width
+                var old_col = i % self.width
+                var new_row = i // width
+                var new_col = i % width
+                mat[new_row, new_col] = self[old_row, old_col]
+        else:
+            # Column-major order
+            for i in range(self.size):
+                var old_col = i // self.height
+                var old_row = i % self.height
+                var new_col = i // height
+                var new_row = i % height
+                mat[new_row, new_col] = self[old_row, old_col]
+                
         return mat^
     
     fn cov(self) raises -> Matrix:
