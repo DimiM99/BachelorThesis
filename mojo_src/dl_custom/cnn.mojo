@@ -51,23 +51,17 @@ struct SimpleNN:
         var one_hot_Y = self.one_hot(Y)
         var dZ2 = self.A2 - one_hot_Y
         var dW2 = dZ2 * self.A1.T() / m
-        var db2_sum = dZ2.sum(1)
-        var db2 = Matrix(dZ2.height, 1)
-        for i in range(dZ2.height):
-            db2[i,0] = db2_sum.data[i] / m
+        var db2 = dZ2.sum(1).reshape(-1, 1) / m
         var dZ1 = (self.W2.T() * dZ2).ele_mul(ReLu_Deriv(self.Z1))
         var dW1 = dZ1 * X.T() / m
-        var db1_sum = dZ1.sum(1)
-        var db1 = Matrix(dZ1.height, 1)
-        for i in range(dZ1.height):
-            db1[i,0] = db1_sum.data[i] / m
+        var db1 = dZ1.sum(1).reshape(-1, 1) / m
         return dW1, db1, dW2, db2
 
     fn update_params(inout self, dW1: Matrix, db1: Matrix, dW2: Matrix, db2: Matrix, learning_rate: Float32) raises:
-        self.W1 -= learning_rate * dW1
-        self.b1 -= learning_rate * db1
-        self.W2 -= learning_rate * dW2
-        self.b2 -= learning_rate * db2
+        self.W1 = self.W1 - learning_rate * dW1
+        self.b1 = self.b1 - learning_rate * db1
+        self.W2 = self.W2 - learning_rate * dW2
+        self.b2 = self.b2 - learning_rate * db2
 
     fn get_predictions(self, A2: Matrix) raises -> Matrix:
         return A2.argmax(0)
