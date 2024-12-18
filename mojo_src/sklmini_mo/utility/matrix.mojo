@@ -15,30 +15,30 @@ struct Matrix(Stringable, Formattable):
     var height: Int
     var width: Int
     var size: Int
-    var data: UnsafePointer[Float32]
+    var data: UnsafePointer[Float64]
     var order: String
-    alias simd_width: Int = 4 * simdwidthof[DType.float32]() if is_apple_silicon() else 2 * simdwidthof[DType.float32]()
+    alias simd_width: Int = 4 * simdwidthof[DType.float64]() if is_apple_silicon() else 2 * simdwidthof[DType.float64]()
 
     # initialize from UnsafePointer
     @always_inline
-    fn __init__(inout self, height: Int, width: Int, data: UnsafePointer[Float32] = UnsafePointer[Float32](), order: String = 'c', rand: Bool = False):
+    fn __init__(inout self, height: Int, width: Int, data: UnsafePointer[Float64] = UnsafePointer[Float64](), order: String = 'c', rand: Bool = False):
         self.height = height
         self.width = width
         self.size = height * width
-        self.data = UnsafePointer[Float32].alloc(self.size)
+        self.data = UnsafePointer[Float64].alloc(self.size)
         self.order = order.lower()
         if data:
             memcpy(self.data, data, self.size)
         if rand:
             for i in range(self.size):
-                self.data[i] = random_float64().cast[DType.float32]()
+                self.data[i] = random_float64()
 
     # initialize from List
-    fn __init__(inout self, height: Int, width: Int, def_input: List[Float32]):
+    fn __init__(inout self, height: Int, width: Int, def_input: List[Float64]):
         self.height = height
         self.width = width
         self.size = height * width
-        self.data = UnsafePointer[Float32].alloc(self.size)
+        self.data = UnsafePointer[Float64].alloc(self.size)
         self.order = 'c'
         if len(def_input) > 0:
             memcpy(self.data, def_input.data, self.size)
@@ -48,11 +48,11 @@ struct Matrix(Stringable, Formattable):
         self.height = height
         self.width = width
         self.size = height * width
-        self.data = UnsafePointer[Float32].alloc(self.size)
+        self.data = UnsafePointer[Float64].alloc(self.size)
         self.order = 'c'
         var rng: Int = len(def_input)
         for i in range(rng):
-            self.data[i] = atof(str(def_input[i])).cast[DType.float32]()
+            self.data[i] = atof(str(def_input[i])).cast[DType.float64]()
 
     # initialize in 2D numpy style
     fn __init__(inout self, npstyle: String, order: String = 'c') raises:
@@ -60,7 +60,7 @@ struct Matrix(Stringable, Formattable):
         if mat[0] == '[' and mat[1] == '[' and mat[len(mat) - 1] == ']' and mat[len(mat) - 2] == ']':
             self.width = 0
             self.size = 0
-            self.data = UnsafePointer[Float32]()
+            self.data = UnsafePointer[Float64]()
             self.order = order.lower()
             var rows = mat[:-1].split(']')
             self.height = len(rows) - 1
@@ -69,9 +69,9 @@ struct Matrix(Stringable, Formattable):
                 if i == 0:
                     self.width = len(values)
                     self.size = self.height * self.width
-                    self.data = UnsafePointer[Float32].alloc(self.size)
+                    self.data = UnsafePointer[Float64].alloc(self.size)
                 for j in range(self.width):
-                    self.store[1](i, j, atof(values[j]).cast[DType.float32]())
+                    self.store[1](i, j, atof(values[j]).cast[DType.float64]())
         else:
             raise Error('Error: Matrix is not initialized in the correct form!')
 
@@ -79,7 +79,7 @@ struct Matrix(Stringable, Formattable):
         self.height = other.height
         self.width = other.width
         self.size = other.size
-        self.data = UnsafePointer[Float32].alloc(self.size)
+        self.data = UnsafePointer[Float64].alloc(self.size)
         self.order = other.order
         memcpy(self.data, other.data, self.size)
 
@@ -91,10 +91,10 @@ struct Matrix(Stringable, Formattable):
         self.order = existing.order
         existing.height = existing.width = existing.size = 0
         existing.order = ''
-        existing.data = UnsafePointer[Float32]()
+        existing.data = UnsafePointer[Float64]()
 
     @always_inline
-    fn load[nelts: Int](self, y: Int, x: Int) -> SIMD[DType.float32, nelts]:
+    fn load[nelts: Int](self, y: Int, x: Int) -> SIMD[DType.float64, nelts]:
         var loc: Int
         if self.order == 'c':
             loc = (y * self.width) + x
@@ -103,7 +103,7 @@ struct Matrix(Stringable, Formattable):
         return self.data.load[width=nelts](loc)
 
     @always_inline
-    fn store[nelts: Int](self, y: Int, x: Int, val: SIMD[DType.float32, nelts]):
+    fn store[nelts: Int](self, y: Int, x: Int, val: SIMD[DType.float64, nelts]):
         var loc: Int
         if self.order == 'c':
             loc = (y * self.width) + x
@@ -113,7 +113,7 @@ struct Matrix(Stringable, Formattable):
 
     # access an element
     @always_inline
-    fn __getitem__(self, row: Int, column: Int) raises -> Float32:
+    fn __getitem__(self, row: Int, column: Int) raises -> Float64:
         var loc: Int
         if self.order == 'c':
             loc = (row * self.width) + column
@@ -347,7 +347,7 @@ struct Matrix(Stringable, Formattable):
 
     # replace an element
     @always_inline
-    fn __setitem__(inout self, row: Int, column: Int, val: Float32) raises:
+    fn __setitem__(inout self, row: Int, column: Int, val: Float64) raises:
         var loc: Int
         if self.order == 'c':
             loc = (row * self.width) + column
@@ -465,7 +465,7 @@ struct Matrix(Stringable, Formattable):
         return self.size
 
     @always_inline
-    fn __eq__(self, rhs: Float32) -> InlinedFixedVector[Bool]:
+    fn __eq__(self, rhs: Float64) -> InlinedFixedVector[Bool]:
         var result = InlinedFixedVector[Bool](self.size)
         if self.size < 131072:
             for i in range(self.size):
@@ -478,7 +478,7 @@ struct Matrix(Stringable, Formattable):
         return result^
 
     @always_inline
-    fn __ne__(self, rhs: Float32) -> InlinedFixedVector[Bool]:
+    fn __ne__(self, rhs: Float64) -> InlinedFixedVector[Bool]:
         var result = InlinedFixedVector[Bool](self.size)
         if self.size < 131072:
             for i in range(self.size):
@@ -491,7 +491,7 @@ struct Matrix(Stringable, Formattable):
         return result^
 
     @always_inline
-    fn __gt__(self, rhs: Float32) -> InlinedFixedVector[Bool]:
+    fn __gt__(self, rhs: Float64) -> InlinedFixedVector[Bool]:
         var result = InlinedFixedVector[Bool](self.size)
         if self.size < 131072:
             for i in range(self.size):
@@ -504,7 +504,7 @@ struct Matrix(Stringable, Formattable):
         return result^
 
     @always_inline
-    fn __ge__(self, rhs: Float32) -> InlinedFixedVector[Bool]:
+    fn __ge__(self, rhs: Float64) -> InlinedFixedVector[Bool]:
         var result = InlinedFixedVector[Bool](self.size)
         if self.size < 131072:
             for i in range(self.size):
@@ -517,7 +517,7 @@ struct Matrix(Stringable, Formattable):
         return result^
 
     @always_inline
-    fn __lt__(self, rhs: Float32) -> InlinedFixedVector[Bool]:
+    fn __lt__(self, rhs: Float64) -> InlinedFixedVector[Bool]:
         var result = InlinedFixedVector[Bool](self.size)
         if self.size < 131072:
             for i in range(self.size):
@@ -530,7 +530,7 @@ struct Matrix(Stringable, Formattable):
         return result^
 
     @always_inline
-    fn __le__(self, rhs: Float32) -> InlinedFixedVector[Bool]:
+    fn __le__(self, rhs: Float64) -> InlinedFixedVector[Bool]:
         var result = InlinedFixedVector[Bool](self.size)
         if self.size < 131072:
             for i in range(self.size):
@@ -587,15 +587,15 @@ struct Matrix(Stringable, Formattable):
         self = self + rhs
 
     @always_inline
-    fn __add__(self, rhs: Float32) -> Self:
+    fn __add__(self, rhs: Float64) -> Self:
         return self._elemwise_scalar[add](rhs)
 
     @always_inline
-    fn __radd__(self, lhs: Float32) -> Self:
+    fn __radd__(self, lhs: Float64) -> Self:
         return self + lhs
 
     @always_inline
-    fn __iadd__(inout self, rhs: Float32):
+    fn __iadd__(inout self, rhs: Float64):
         self = self + rhs
 
     @always_inline
@@ -635,15 +635,15 @@ struct Matrix(Stringable, Formattable):
         self = self - rhs
 
     @always_inline
-    fn __sub__(self, rhs: Float32) -> Self:
+    fn __sub__(self, rhs: Float64) -> Self:
         return self._elemwise_scalar[sub](rhs)
 
     @always_inline
-    fn __rsub__(self, lhs: Float32) -> Self:
+    fn __rsub__(self, lhs: Float64) -> Self:
         return -(self - lhs)
 
     @always_inline
-    fn __isub__(inout self, rhs: Float32):
+    fn __isub__(inout self, rhs: Float64):
         self = self - rhs
 
     @always_inline
@@ -683,24 +683,24 @@ struct Matrix(Stringable, Formattable):
         self = self / rhs
 
     @always_inline
-    fn __truediv__(self, rhs: Float32) -> Self:
+    fn __truediv__(self, rhs: Float64) -> Self:
         return self._elemwise_scalar[div](rhs)
 
     @always_inline
-    fn __rtruediv__(self, lhs: Float32) -> Self:
+    fn __rtruediv__(self, lhs: Float64) -> Self:
         return lhs * (self ** -1)
 
     @always_inline
-    fn __itruediv__(inout self, rhs: Float32):
+    fn __itruediv__(inout self, rhs: Float64):
         self = self / rhs
 
     @always_inline
     fn __mul__(self, rhs: Self) raises -> Self:
         if self.width != rhs.height:
             raise Error('Error: Cannot multiply matrices with shapes (' + str(self.height) + ', ' + str(self.width) + ') and (' + str(rhs.height) + ', ' + str(rhs.width) + ')')
-        var A = matmul.Matrix[DType.float32](self.data, (self.height, self.width))
-        var B = matmul.Matrix[DType.float32](rhs.data, (rhs.height, rhs.width))
-        var C = matmul.Matrix[DType.float32]((self.height, rhs.width))
+        var A = matmul.Matrix[DType.float64](self.data, (self.height, self.width))
+        var B = matmul.Matrix[DType.float64](rhs.data, (rhs.height, rhs.width))
+        var C = matmul.Matrix[DType.float64]((self.height, rhs.width))
         memset_zero(C.data, self.height * rhs.width)
         matmul.matmul(self.height, self.width, rhs.width, C, A, B)
         var mat = Matrix(self.height, rhs.width)
@@ -712,15 +712,15 @@ struct Matrix(Stringable, Formattable):
         self = self * rhs
 
     @always_inline
-    fn __mul__(self, rhs: Float32) -> Self:
+    fn __mul__(self, rhs: Float64) -> Self:
         return self._elemwise_scalar[mul](rhs)
 
     @always_inline
-    fn __rmul__(self, lhs: Float32) -> Self:
+    fn __rmul__(self, lhs: Float64) -> Self:
         return self * lhs
 
     @always_inline
-    fn __imul__(inout self, rhs: Float32):
+    fn __imul__(inout self, rhs: Float64):
         self = self * rhs
 
     @always_inline
@@ -784,7 +784,7 @@ struct Matrix(Stringable, Formattable):
         raise Error("Error: Cannot element-wise multiply matrices with different shapes!")
 
     @always_inline
-    fn where(self, cmp: InlinedFixedVector[Bool], _true: Float32, _false: Float32) -> Matrix:
+    fn where(self, cmp: InlinedFixedVector[Bool], _true: Float64, _false: Float64) -> Matrix:
         var mat = Matrix(self.height, self.width, order= self.order)
         if self.size < 40960:
             for i in range(self.size):
@@ -802,7 +802,7 @@ struct Matrix(Stringable, Formattable):
             parallelize[p](self.size, num_logical_cores())
         return mat^
 
-    fn where(self, cmp: InlinedFixedVector[Bool], _true: Matrix, _false: Float32) -> Matrix:
+    fn where(self, cmp: InlinedFixedVector[Bool], _true: Matrix, _false: Float64) -> Matrix:
         var mat = Matrix(self.height, self.width, order= self.order)
         if self.size < 40960:
             for i in range(self.size):
@@ -820,7 +820,7 @@ struct Matrix(Stringable, Formattable):
             parallelize[p](self.size, num_logical_cores())
         return mat^
 
-    fn where(self, cmp: InlinedFixedVector[Bool], _true: Float32, _false: Matrix) -> Matrix:
+    fn where(self, cmp: InlinedFixedVector[Bool], _true: Float64, _false: Matrix) -> Matrix:
         var mat = Matrix(self.height, self.width, order= self.order)
         if self.size < 40960:
             for i in range(self.size):
@@ -840,7 +840,7 @@ struct Matrix(Stringable, Formattable):
 
     @always_inline
     fn argwhere(self, cmp: InlinedFixedVector[Bool]) -> Matrix:
-        var args = List[Float32]()
+        var args = List[Float64]()
         for i in range(self.size):
             if cmp[i]:
                 args.append(i // self.width)
@@ -898,12 +898,12 @@ struct Matrix(Stringable, Formattable):
     @always_inline
     fn cumsum(self) -> Matrix:
         var mat = Matrix(self.height, self.width, order= self.order)
-        cumsum(Buffer[DType.float32](mat.data, self.size), Buffer[DType.float32](self.data, self.size))
+        cumsum(Buffer[DType.float64](mat.data, self.size), Buffer[DType.float64](self.data, self.size))
         return mat^
 
     @always_inline
-    fn sum(self) -> Float32:
-        return sum(Buffer[DType.float32](self.data, self.size))
+    fn sum(self) -> Float64:
+        return sum(Buffer[DType.float64](self.data, self.size))
 
     @always_inline
     fn sum(self, axis: Int) -> Matrix:
@@ -931,7 +931,7 @@ struct Matrix(Stringable, Formattable):
         return mat^
 
     @always_inline
-    fn mean(self) -> Float32:
+    fn mean(self) -> Float64:
         return self.sum() / self.size
 
     @always_inline
@@ -940,7 +940,7 @@ struct Matrix(Stringable, Formattable):
             return self.sum(0) / self.height
         return self.sum(1) / self.width
 
-    fn mean_slow(self) -> Float32:
+    fn mean_slow(self) -> Float64:
         return (self / self.size).sum()
 
     fn mean_slow0(self) -> Matrix:
@@ -956,11 +956,11 @@ struct Matrix(Stringable, Formattable):
         return mat^
 
     @always_inline
-    fn _var(self) -> Float32:
+    fn _var(self) -> Float64:
         return ((self - self.mean()) ** 2).mean()
 
     @always_inline
-    fn _var(self, _mean: Float32) -> Float32:
+    fn _var(self, _mean: Float64) -> Float64:
         return ((self - _mean) ** 2).mean()
 
     @always_inline
@@ -1014,14 +1014,14 @@ struct Matrix(Stringable, Formattable):
         return mat^
 
     @always_inline
-    fn std(self) -> Float32:
+    fn std(self) -> Float64:
         return math.sqrt(self._var())
 
     @always_inline
-    fn std(self, _mean: Float32) -> Float32:
+    fn std(self, _mean: Float64) -> Float64:
         return math.sqrt(self._var(_mean))
 
-    fn std_slow(self, _mean: Float32) -> Float32:
+    fn std_slow(self, _mean: Float64) -> Float64:
         return math.sqrt(((self - _mean) ** 2).mean_slow())
 
     @always_inline
@@ -1131,7 +1131,7 @@ struct Matrix(Stringable, Formattable):
     fn argmin(self) -> Int:
         var label = UnsafePointer[Scalar[DType.index]].alloc(1)
         try:
-            argmin(NDBuffer[DType.float32, 1](self.data, DimList(self.size)), 0, NDBuffer[DType.index, 1](label, DimList(1)))
+            argmin(NDBuffer[DType.float64, 1](self.data, DimList(self.size)), 0, NDBuffer[DType.index, 1](label, DimList(1)))
         except:
             print('Error finding argmin!')
         var index = int(label[])
@@ -1169,7 +1169,7 @@ struct Matrix(Stringable, Formattable):
     fn argmax(self) -> Int:
         var label = UnsafePointer[Scalar[DType.index]].alloc(1)
         try:
-            argmax(NDBuffer[DType.float32, 1](self.data, DimList(self.size)), 0, NDBuffer[DType.index, 1](label, DimList(1)))
+            argmax(NDBuffer[DType.float64, 1](self.data, DimList(self.size)), 0, NDBuffer[DType.index, 1](label, DimList(1)))
         except:
             print('Error finding argmax!')
         var index = int(label[])
@@ -1204,8 +1204,8 @@ struct Matrix(Stringable, Formattable):
         return mat^
 
     @always_inline
-    fn min(self) -> Float32:
-        return algorithm.reduction.min(Buffer[DType.float32](self.data, self.size))
+    fn min(self) -> Float64:
+        return algorithm.reduction.min(Buffer[DType.float64](self.data, self.size))
 
     @always_inline
     fn min(self, axis: Int) -> Matrix:
@@ -1233,8 +1233,8 @@ struct Matrix(Stringable, Formattable):
         return mat^
 
     @always_inline
-    fn max(self) -> Float32:
-        return algorithm.reduction.max(Buffer[DType.float32](self.data, self.size))
+    fn max(self) -> Float64:
+        return algorithm.reduction.max(Buffer[DType.float64](self.data, self.size))
 
     @always_inline
     fn max(self, axis: Int) -> Matrix:
@@ -1334,7 +1334,7 @@ struct Matrix(Stringable, Formattable):
         return result^
 
     @always_inline
-    fn norm(self) -> Float32:
+    fn norm(self) -> Float64:
         return math.sqrt((self ** 2).sum())
 
     @always_inline
@@ -1355,7 +1355,7 @@ struct Matrix(Stringable, Formattable):
             var H = Matrix.eye(self.height, self.order)
             # -------------------
             var a: Matrix = R[True, i, i]  # partial column vector
-            var norm_a: Float32 = a.norm()
+            var norm_a: Float64 = a.norm()
             if a.data[0] < 0.0: norm_a = -norm_a
             var v: Matrix = a / (a.data[0] + norm_a)
             v.data[0] = 1.0
@@ -1380,7 +1380,7 @@ struct Matrix(Stringable, Formattable):
         return Q^, R^
 
     @always_inline
-    fn is_upper_tri(self, tol: Float32) raises -> Bool:
+    fn is_upper_tri(self, tol: Float64) raises -> Bool:
         for i in range(self.height):
             for j in range(i):
                 if abs(self[i, j]) > tol:
@@ -1496,8 +1496,8 @@ struct Matrix(Stringable, Formattable):
         return freq^
 
     @always_inline
-    fn uniquef(self) -> List[Float32]:
-        var list = List[Float32]()
+    fn uniquef(self) -> List[Float64]:
+        var list = List[Float64]()
         for i in range(self.size):
             var contains = False
             for j in list:
@@ -1520,7 +1520,7 @@ struct Matrix(Stringable, Formattable):
         return Matrix.full(height, width, 1.0, order)
 
     @staticmethod
-    fn full(height: Int, width: Int, val: Float32, order: String = 'c') -> Matrix:
+    fn full(height: Int, width: Int, val: Float64, order: String = 'c') -> Matrix:
         var mat = Matrix(height, width, order= order)
         mat.fill(val)
         return mat^
@@ -1530,8 +1530,8 @@ struct Matrix(Stringable, Formattable):
         memset_zero(self.data, self.size)
 
     @always_inline
-    fn fill(self, val: Float32):
-        Buffer[DType.float32](self.data, self.size).fill(val)
+    fn fill(self, val: Float64):
+        Buffer[DType.float64](self.data, self.size).fill(val)
 
     @staticmethod
     @always_inline
@@ -1579,7 +1579,7 @@ struct Matrix(Stringable, Formattable):
     fn from_numpy(np_arr: PythonObject, order: String = 'c') raises -> Matrix:
         var np = Python.import_module("numpy")
         # Ensure contiguous array with correct type and order
-        var np_arr_f = np.ascontiguousarray(np_arr, dtype='float32')
+        var np_arr_f = np.ascontiguousarray(np_arr, dtype='float64')
         
         # Get dimensions
         var height = int(np_arr_f.shape[0])
@@ -1591,7 +1591,7 @@ struct Matrix(Stringable, Formattable):
         var mat = Matrix(height, width, order=order)
         
         # Get pointer to numpy array data
-        var data_ptr = np_arr_f.__array_interface__['data'][0].unsafe_get_as_pointer[DType.float32]()
+        var data_ptr = np_arr_f.__array_interface__['data'][0].unsafe_get_as_pointer[DType.float64]()
         
         # Copy data
         memcpy(mat.data, data_ptr, height * width)
@@ -1601,7 +1601,7 @@ struct Matrix(Stringable, Formattable):
     fn to_numpy(self) raises -> PythonObject:
         var np = Python.import_module("numpy")
         var np_arr = np.empty((self.height,self.width), dtype='f', order= self.order.upper())
-        memcpy(np_arr.__array_interface__['data'][0].unsafe_get_as_pointer[DType.float32](), self.data, self.size)
+        memcpy(np_arr.__array_interface__['data'][0].unsafe_get_as_pointer[DType.float64](), self.data, self.size)
         return np_arr^
 
     @always_inline
@@ -1631,19 +1631,19 @@ struct Matrix(Stringable, Formattable):
         return mat^
 
     @always_inline
-    fn _elemwise_scalar[func: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, rhs: Float32) -> Self:
+    fn _elemwise_scalar[func: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, rhs: Float64) -> Self:
         var mat = Matrix(self.height, self.width, order= self.order)
         if self.size < 262144:
             @parameter
             fn scalar_vectorize[simd_width: Int](idx: Int):
-                mat.data.store[width=simd_width](idx, func[DType.float32, simd_width](self.data.load[width=simd_width](idx), rhs))
+                mat.data.store[width=simd_width](idx, func[DType.float64, simd_width](self.data.load[width=simd_width](idx), rhs))
             vectorize[scalar_vectorize, self.simd_width](self.size)
         else:
             var n_vects = int(math.ceil(self.size / self.simd_width))
             @parameter
             fn scalar_vectorize_parallelize(i: Int):
                 var idx = i * self.simd_width
-                mat.data.store[width=self.simd_width](idx, func[DType.float32, self.simd_width](self.data.load[width=self.simd_width](idx), rhs))
+                mat.data.store[width=self.simd_width](idx, func[DType.float64, self.simd_width](self.data.load[width=self.simd_width](idx), rhs))
             parallelize[scalar_vectorize_parallelize](n_vects, num_logical_cores())
         return mat^
 
@@ -1653,14 +1653,14 @@ struct Matrix(Stringable, Formattable):
         if self.size < 262144:
             @parameter
             fn matrix_vectorize[simd_width: Int](idx: Int):
-                mat.data.store[width=simd_width](idx, func[DType.float32, simd_width](self.data.load[width=simd_width](idx), rhs.data.load[width=simd_width](idx)))
+                mat.data.store[width=simd_width](idx, func[DType.float64, simd_width](self.data.load[width=simd_width](idx), rhs.data.load[width=simd_width](idx)))
             vectorize[matrix_vectorize, self.simd_width](self.size)
         else:
             var n_vects = int(math.ceil(self.size / self.simd_width))
             @parameter
             fn matrix_vectorize_parallelize(i: Int):
                 var idx = i * self.simd_width
-                mat.data.store[width=self.simd_width](idx, func[DType.float32, self.simd_width](self.data.load[width=self.simd_width](idx), rhs.data.load[width=self.simd_width](idx)))
+                mat.data.store[width=self.simd_width](idx, func[DType.float64, self.simd_width](self.data.load[width=self.simd_width](idx), rhs.data.load[width=self.simd_width](idx)))
             parallelize[matrix_vectorize_parallelize](n_vects, num_logical_cores())
         return mat^
 

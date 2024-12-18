@@ -117,11 +117,11 @@ fn train_test_split(X: Matrix, y: PythonObject, *, random_state: Int, test_size:
     var split_i = int(X.height - (test_ratio * X.height))
     return X[ids[:split_i]], X[ids[split_i:]], SplittedPO(y[ids_to_numpy(ids[:split_i])], y[ids_to_numpy(ids[split_i:])])
 
-fn KFold[m_type: CVM](inout model: m_type, X: Matrix, y: Matrix, scoring: fn(Matrix, Matrix) raises -> Float32, n_splits: Int = 5) raises -> Float32:
+fn KFold[m_type: CVM](inout model: m_type, X: Matrix, y: Matrix, scoring: fn(Matrix, Matrix) raises -> Float64, n_splits: Int = 5) raises -> Float64:
     var ids = Matrix.rand_choice(X.height, X.height, False)
     var test_count = int((1 / n_splits) * X.height)
     var start_of_test = 0
-    var mean_score: Float32 = 0.0
+    var mean_score: Float64 = 0.0
     for _ in range(n_splits):
         var end_of_test = min(start_of_test + test_count, X.height)
         model.fit(X[ids[end_of_test:] + ids[:start_of_test]], y[ids[end_of_test:] + ids[:start_of_test]])
@@ -131,7 +131,7 @@ fn KFold[m_type: CVM](inout model: m_type, X: Matrix, y: Matrix, scoring: fn(Mat
     return mean_score
 
 fn GridSearchCV[m_type: CVM](X: Matrix, y: Matrix, param_grid: Dict[String, List[String]],
-                            scoring: fn(Matrix, Matrix) raises -> Float32, neg_score: Bool = False, n_jobs: Int = 0, cv: Int = 5) raises -> Tuple[Dict[String, String], Float32]:
+                            scoring: fn(Matrix, Matrix) raises -> Float64, neg_score: Bool = False, n_jobs: Int = 0, cv: Int = 5) raises -> Tuple[Dict[String, String], Float64]:
     var dic_values = List[List[String]]()
     for i in range(len(param_grid)):
         dic_values.append(List[String]())

@@ -49,7 +49,7 @@ fn gauss_jordan(owned a: Matrix) raises -> Matrix:
         eliminate(a[i], a[i], i, target=1)
     return a^
 
-fn cov_value(x: Matrix, y: Matrix) raises -> Float32:
+fn cov_value(x: Matrix, y: Matrix) raises -> Float64:
     return ((y - y.mean()).ele_mul(x - x.mean())).sum() / (x.size - 1)
 
 # ===----------------------------------------------------------------------===#
@@ -132,8 +132,8 @@ fn _partition[
 
 fn partition[
     lifetime: MutableLifetime, //,
-    cmp_fn: fn (Float32, Float32) capturing -> Bool,
-](span: Span[Float32, lifetime], inout indices: InlinedFixedVector[Int], k: Int):
+    cmp_fn: fn (Float64, Float64) capturing -> Bool,
+](span: Span[Float64, lifetime], inout indices: InlinedFixedVector[Int], k: Int):
     """Partition the input buffer inplace such that first k elements are the
     largest (or smallest if cmp_fn is < operator) elements.
     The ordering of the first k elements is undefined.
@@ -144,7 +144,7 @@ fn partition[
     """
 
     @parameter
-    fn _cmp_fn(lhs: _SortWrapper[Float32], rhs: _SortWrapper[Float32]) -> Bool:
+    fn _cmp_fn(lhs: _SortWrapper[Float64], rhs: _SortWrapper[Float64]) -> Bool:
         return cmp_fn(lhs.data, rhs.data)
 
     _partition[_cmp_fn](span, indices, k)
@@ -152,7 +152,7 @@ fn partition[
 # ===----------------------------------------------------------------------===#
 
 @always_inline
-fn euclidean_distance(x1: Matrix, x2: Matrix) raises -> Float32:
+fn euclidean_distance(x1: Matrix, x2: Matrix) raises -> Float64:
     return math.sqrt(((x1 - x2) ** 2).sum())
 
 @always_inline
@@ -160,7 +160,7 @@ fn euclidean_distance(x1: Matrix, x2: Matrix, axis: Int) raises -> Matrix:
     return (((x1 - x2) ** 2).sum(axis)).sqrt()
 
 @always_inline
-fn manhattan_distance(x1: Matrix, x2: Matrix) raises -> Float32:
+fn manhattan_distance(x1: Matrix, x2: Matrix) raises -> Float64:
     return (x1 - x2).abs().sum()
 
 @always_inline
@@ -168,19 +168,19 @@ fn manhattan_distance(x1: Matrix, x2: Matrix, axis: Int) raises -> Matrix:
     return (x1 - x2).abs().sum(axis)
 
 @always_inline
-fn lt(lhs: Float32, rhs:Float32) capturing -> Bool:
+fn lt(lhs: Float64, rhs:Float64) capturing -> Bool:
     return lhs < rhs
 
 @always_inline
-fn le(lhs: Float32, rhs:Float32) capturing -> Bool:
+fn le(lhs: Float64, rhs:Float64) capturing -> Bool:
     return lhs <= rhs
 
 @always_inline
-fn gt(lhs: Float32, rhs:Float32) capturing -> Bool:
+fn gt(lhs: Float64, rhs:Float64) capturing -> Bool:
     return lhs > rhs
 
 @always_inline
-fn ge(lhs: Float32, rhs:Float32) capturing -> Bool:
+fn ge(lhs: Float64, rhs:Float64) capturing -> Bool:
     return lhs >= rhs
 
 @always_inline
@@ -200,12 +200,12 @@ fn div[dtype: DType, width: Int](a: SIMD[dtype, width], b: SIMD[dtype, width]) -
     return a / b
 
 @always_inline
-fn partial_simd_load[width: Int](data: UnsafePointer[Float32], offset: Int, size: Int) -> SIMD[DType.float32, width]:
+fn partial_simd_load[width: Int](data: UnsafePointer[Float64], offset: Int, size: Int) -> SIMD[DType.float64, width]:
     var nelts = size - offset
     if nelts >= width:
         return data.load[width=width](offset)
     var point = data + offset
-    var simd = SIMD[DType.float32, width]()
+    var simd = SIMD[DType.float64, width]()
     for i in range(0, nelts):
         simd[i] = point[i]
     return simd
@@ -259,11 +259,11 @@ fn softmax(Z: Matrix) -> Matrix:
     return exp_Z / exp_Z.sum()
 
 @always_inline
-fn polynomial_kernel(params: Tuple[Float32, Int], X: Matrix, Z: Matrix) raises -> Matrix:
+fn polynomial_kernel(params: Tuple[Float64, Int], X: Matrix, Z: Matrix) raises -> Matrix:
     return (params[0] + X * Z.T()) ** params[1] #(c + X.y)^degree
 
 @always_inline
-fn gaussian_kernel(params: Tuple[Float32, Int], X: Matrix, Z: Matrix) raises -> Matrix:
+fn gaussian_kernel(params: Tuple[Float64, Int], X: Matrix, Z: Matrix) raises -> Matrix:
     var sq_dist = Matrix(X.height, Z.height, order= X.order)
     for i in range(sq_dist.height):  # Loop over each sample in X
         for j in range(sq_dist.width):  # Loop over each sample in Z
@@ -271,66 +271,66 @@ fn gaussian_kernel(params: Tuple[Float32, Int], X: Matrix, Z: Matrix) raises -> 
     return (-sq_dist * params[0]).exp() # e^-(1/ σ2) ||X-y|| ^2
 
 @always_inline
-fn mse(y: Matrix, y_pred: Matrix) raises -> Float32:
+fn mse(y: Matrix, y_pred: Matrix) raises -> Float64:
     return ((y - y_pred) ** 2).mean()
 
 @always_inline
-fn cross_entropy(y: Matrix, y_pred: Matrix) raises -> Float32:
+fn cross_entropy(y: Matrix, y_pred: Matrix) raises -> Float64:
     return -(y.ele_mul((y_pred + 1e-15).log()) + (1.0 - y).ele_mul((1.0 - y_pred + 1e-15).log())).mean()
 
-fn r2_score(y: Matrix, y_pred: Matrix) raises -> Float32:
+fn r2_score(y: Matrix, y_pred: Matrix) raises -> Float64:
     return 1.0 - (((y_pred - y) ** 2).sum() / ((y - y.mean()) ** 2).sum())
 
-fn accuracy_score(y: Matrix, y_pred: Matrix) raises -> Float32:
-    var correct_count: Float32 = 0.0
+fn accuracy_score(y: Matrix, y_pred: Matrix) raises -> Float64:
+    var correct_count: Float64 = 0.0
     for i in range(y.size):
         if y.data[i] == y_pred.data[i]:
             correct_count += 1.0
     return correct_count / y.size
 
-fn accuracy_score(y: List[String], y_pred: List[String]) raises -> Float32:
-    var correct_count: Float32 = 0.0
+fn accuracy_score(y: List[String], y_pred: List[String]) raises -> Float64:
+    var correct_count: Float64 = 0.0
     for i in range(len(y)):
         if y[i] == y_pred[i]:
             correct_count += 1.0
     return correct_count / len(y)
 
-fn accuracy_score(y: PythonObject, y_pred: Matrix) raises -> Float32:
-    var correct_count: Float32 = 0.0
+fn accuracy_score(y: PythonObject, y_pred: Matrix) raises -> Float64:
+    var correct_count: Float64 = 0.0
     for i in range(y_pred.size):
         if y[i] == y_pred.data[i]:
             correct_count += 1.0
     return correct_count / y_pred.size
 
-fn accuracy_score(y: PythonObject, y_pred: List[String]) raises -> Float32:
-    var correct_count: Float32 = 0.0
+fn accuracy_score(y: PythonObject, y_pred: List[String]) raises -> Float64:
+    var correct_count: Float64 = 0.0
     for i in range(len(y_pred)):
         if str(y[i]) == y_pred[i]:
             correct_count += 1.0
     return correct_count / len(y_pred)
 
 @always_inline
-fn entropy(y: Matrix) -> Float32:
+fn entropy(y: Matrix) -> Float64:
     var histogram = y.bincount()
-    var size = Float32(y.size)
-    var _sum: Float32 = 0.0
+    var size = Float64(y.size)
+    var _sum: Float64 = 0.0
     for i in range(histogram.capacity):
-        var p: Float32 = histogram[i] / size
+        var p: Float64 = histogram[i] / size
         if p > 0 and p != 1.0:
             _sum += p * math.log2(p)
     return -_sum
 
 @always_inline
-fn gini(y: Matrix) -> Float32:
+fn gini(y: Matrix) -> Float64:
     var histogram = y.bincount()
-    var size = Float32(y.size)
-    var _sum: Float32 = 0.0
+    var size = Float64(y.size)
+    var _sum: Float64 = 0.0
     for i in range(histogram.capacity):
         _sum += (histogram[i] / size) ** 2
     return 1 - _sum
 
 @always_inline
-fn mse_loss(y: Matrix) -> Float32:
+fn mse_loss(y: Matrix) -> Float64:
     if len(y) == 0:
         return 0.0
     return ((y - y.mean()) ** 2).mean()
