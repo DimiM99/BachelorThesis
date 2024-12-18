@@ -47,8 +47,8 @@ struct BenchmarkResults:
         self.wine_kmeans = other.wine_kmeans
         self.mnist_simplenn = other.mnist_simplenn
 
-fn calculate_inertia(X: Matrix, labels: Matrix, centroids: Matrix) raises -> Float32:
-    var inertia: Float32 = 0.0
+fn calculate_inertia(X: Matrix, labels: Matrix, centroids: Matrix) raises -> Float64:
+    var inertia: Float64 = 0.0
     for i in range(centroids.height):
         var cluster_indices = labels.argwhere_l(labels == i)
         if len(cluster_indices) > 0:

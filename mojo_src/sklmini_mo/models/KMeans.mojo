@@ -7,13 +7,13 @@ struct KMeans():
     var K: Int
     var init: String
     var max_iters: Int
-    var tol: Float32
+    var tol: Float64
     var seed: Int
     var clusters: List[List[Int]]
     var centroids: Matrix
     var X: Matrix
 
-    fn __init__(inout self, K: Int = 5, init: String = 'kmeans++', max_iters: Int = 100, tol: Float32 = 1e-4, random_state: Int = 42):
+    fn __init__(inout self, K: Int = 5, init: String = 'kmeans++', max_iters: Int = 100, tol: Float64 = 1e-4, random_state: Int = 42):
         self.K = K
         self.init = init.lower()
         self.max_iters = max_iters
@@ -61,7 +61,7 @@ struct KMeans():
             var distances = Matrix(self.X.height, 1)
             # Compute distances to the nearest centroid
             for idx in range(self.X.height):
-                var min_distance = math.inf[DType.float32]()
+                var min_distance = math.inf[DType.float64]()
                 for idc in range(i): # Only consider the centroids that have been initialized
                     var distance = euclidean_distance(self.X[idx], self.centroids[idc])
                     if distance < min_distance:
@@ -71,7 +71,7 @@ struct KMeans():
             var probabilities = (distances / distances.sum()).cumsum()
             # Select the next centroid based on cumulative probabilities
             for idp in range(len(probabilities)):
-                if random.random_float64().cast[DType.float32]() < probabilities.data[idp]:
+                if random.random_float64().cast[DType.float64]() < probabilities.data[idp]:
                     self.centroids[i] = self.X[idp]
                     break
 

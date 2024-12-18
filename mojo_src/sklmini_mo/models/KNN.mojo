@@ -5,7 +5,7 @@ from sklmini_mo.utility.utils import euclidean_distance, manhattan_distance, le,
 
 struct KNN:
     var k: Int
-    var distance: fn(Matrix, Matrix) raises -> Float32
+    var distance: fn(Matrix, Matrix) raises -> Float64
     var X_train: Matrix
     var y_train: Matrix
 
@@ -29,7 +29,7 @@ struct KNN:
         return y_pred^
 
     @always_inline
-    fn _predict(self, x: Matrix) raises -> Float32:
+    fn _predict(self, x: Matrix) raises -> Float64:
         var distances = Matrix(1, self.X_train.height)
         var dis_indices = InlinedFixedVector[Int](capacity = distances.size)
         
@@ -40,7 +40,7 @@ struct KNN:
             
         # Sort distances such that first k elements are smallest
         partition[le](
-            Span[Float32, __lifetime_of(distances)](
+            Span[Float64, __lifetime_of(distances)](
                 unsafe_ptr= distances.data, 
                 len= distances.size
             ), 
@@ -49,7 +49,7 @@ struct KNN:
         )
         
         # Find most common class among k nearest neighbors using arrays
-        var labels = InlinedFixedVector[Float32](self.k)
+        var labels = InlinedFixedVector[Float64](self.k)
         var counts = InlinedFixedVector[Int](self.k)
         var most_common = self.y_train.data[dis_indices[0]]
         var max_count = 1

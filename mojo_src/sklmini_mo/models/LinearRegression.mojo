@@ -5,23 +5,23 @@ import math
 import time
 
 struct LinearRegression(CVM):
-    var lr: Float32
+    var lr: Float64
     var n_iters: Int
     var penalty: String
-    var reg_alpha: Float32
-    var l1_ratio: Float32
-    var tol: Float32
+    var reg_alpha: Float64
+    var l1_ratio: Float64
+    var tol: Float64
     var batch_size: Int
     var random_state: Int
     var weights: Matrix
-    var bias: Float32
+    var bias: Float64
     var X_mean: Matrix
     var X_std: Matrix
-    var y_mean: Float32
-    var y_std: Float32
+    var y_mean: Float64
+    var y_std: Float64
 
-    fn __init__(inout self, learning_rate: Float32 = 0.001, n_iters: Int = 1000, penalty: String = 'l2', reg_alpha: Float32 = 0.0, l1_ratio: Float32 = -1.0,
-                tol: Float32 = 0.0, batch_size: Int = 0, random_state: Int = -1):
+    fn __init__(inout self, learning_rate: Float64 = 0.001, n_iters: Int = 1000, penalty: String = 'l2', reg_alpha: Float64 = 0.0, l1_ratio: Float64 = -1.0,
+                tol: Float64 = 0.0, batch_size: Int = 0, random_state: Int = -1):
         self.lr = learning_rate
         self.n_iters = n_iters
         self.penalty = penalty.lower()
@@ -67,7 +67,7 @@ struct LinearRegression(CVM):
             else:
                 l2_lambda = 0.0
 
-        var prev_cost = math.inf[DType.float32]()
+        var prev_cost = math.inf[DType.float64]()
         
         # Gradient descent
         for _ in range(self.n_iters):
@@ -99,7 +99,7 @@ struct LinearRegression(CVM):
 
     fn __init__(inout self, params: Dict[String, String]) raises:
         if 'learning_rate' in params:
-            self.lr = atof(params['learning_rate']).cast[DType.float32]()
+            self.lr = atof(params['learning_rate']).cast[DType.float64]()
         else:
             self.lr = 0.01
         if 'n_iters' in params:
@@ -111,15 +111,15 @@ struct LinearRegression(CVM):
         else:
             self.penalty = 'l2'
         if 'reg_alpha' in params:
-            self.reg_alpha = atof(params['reg_alpha']).cast[DType.float32]()
+            self.reg_alpha = atof(params['reg_alpha']).cast[DType.float64]()
         else:
             self.reg_alpha = 0.0
         if 'l1_ratio' in params:
-            self.l1_ratio = atof(params['l1_ratio']).cast[DType.float32]()
+            self.l1_ratio = atof(params['l1_ratio']).cast[DType.float64]()
         else:
             self.l1_ratio = -1.0
         if 'tol' in params:
-            self.tol = atof(params['tol']).cast[DType.float32]()
+            self.tol = atof(params['tol']).cast[DType.float64]()
         else:
             self.tol = 0.0
         if 'batch_size' in params:

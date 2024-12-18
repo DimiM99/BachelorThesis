@@ -57,7 +57,7 @@ struct SimpleNN:
         var db1 = dZ1.sum(1).reshape(-1, 1) / m
         return dW1, db1, dW2, db2
 
-    fn update_params(inout self, dW1: Matrix, db1: Matrix, dW2: Matrix, db2: Matrix, learning_rate: Float32) raises:
+    fn update_params(inout self, dW1: Matrix, db1: Matrix, dW2: Matrix, db2: Matrix, learning_rate: Float64) raises:
         self.W1 = self.W1 - learning_rate * dW1
         self.b1 = self.b1 - learning_rate * db1
         self.W2 = self.W2 - learning_rate * dW2
@@ -66,10 +66,10 @@ struct SimpleNN:
     fn get_predictions(self, A2: Matrix) raises -> Matrix:
         return A2.argmax(0)
 
-    fn get_accuracy(self, predictions: Matrix, Y: Matrix) raises -> Float32:
+    fn get_accuracy(self, predictions: Matrix, Y: Matrix) raises -> Float64:
         return accuracy_score(Y, predictions)
 
-    fn fit(inout self, X_train: Matrix, Y_train: Matrix, learning_rate: Float32 = 0.1, epochs: Int = 100) raises:
+    fn fit(inout self, X_train: Matrix, Y_train: Matrix, learning_rate: Float64 = 0.1, epochs: Int = 100) raises:
         var m = X_train.width
         
         for epoch in range(epochs):
@@ -86,12 +86,24 @@ struct SimpleNN:
             if self.debug and epoch % 10 == 0:
                 var predictions = self.get_predictions(A2)
                 var accuracy = self.get_accuracy(predictions, Y_train)
+                print("=====================================")
+                print("Layer 1")
+                print("Weights")
+                print(self.W1[:5,:5])
+                print("Biases")
+                print(self.b1[:5,:])
+                print("Layer 2")
+                print("Weights")
+                print(self.W2[:5,:5])
+                print("Biases")
+                print(self.b2[:5,:])
                 print("Epoch:", epoch, "Accuracy:", accuracy)
+                print("=====================================")
 
     fn predict(inout self, X: Matrix) raises -> Matrix:
         var A2 = self.forward(X)
         return self.get_predictions(A2)
 
-    fn evaluate(inout self, X: Matrix, Y: Matrix) raises -> Float32:
+    fn evaluate(inout self, X: Matrix, Y: Matrix) raises -> Float64:
         var predictions = self.predict(X)
         return self.get_accuracy(predictions, Y)
