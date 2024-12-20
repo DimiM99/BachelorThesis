@@ -102,7 +102,6 @@ def prepare_data(data_path):
         data.to_csv("mnist.csv", index=False)
 
     m, n = data.shape
-    np.random.shuffle(data)
 
     # Split into train and validation
     split_idx = 1000

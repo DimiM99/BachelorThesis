@@ -158,7 +158,7 @@ def run_benchmarks(n_runs: int = 5) -> BenchmarkResults:
     print("\nBenchmarking Simple Neural Network on MNIST...")
     for i in range(n_runs):
         print(f"Run {i + 1} of {n_runs}")
-        model = SimpleNN(input_size=784, hidden_size=10, output_size=10)
+        model = SimpleNN(input_size=784, hidden_size=10, output_size=10, debug=True)
 
         fit_start = time.time()
         model.fit(

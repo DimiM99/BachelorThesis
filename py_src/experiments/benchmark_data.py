@@ -105,7 +105,6 @@ def load_real_datasets() -> Datasets:
         data.to_csv("mnist.csv", index=False)
     mnist = np.array(data)
     m, n = mnist.shape
-    np.random.shuffle(mnist)
     split_idx = 1000
 
     data_test = mnist[0:split_idx].T
