@@ -1,10 +1,13 @@
 from sklmini_mo.utility.utils import Matrix, ReLu, ReLu_Deriv, softmax, sigmoid, accuracy_score
+import math
+from time import sleep
 
 struct SimpleNN:
     var input_size: Int
     var hidden_size: Int 
     var output_size: Int
     var debug: Bool
+    var debug1: Bool
     var W1: Matrix
     var b1: Matrix 
     var W2: Matrix
@@ -16,13 +19,14 @@ struct SimpleNN:
     var Z2: Matrix 
     var A2: Matrix
 
-    fn __init__(inout self, input_size: Int = 784, hidden_size: Int = 10, output_size: Int = 10, debug: Bool = False):
+    fn __init__(inout self, input_size: Int = 784, hidden_size: Int = 10, output_size: Int = 10, debug: Bool = False, debug1: Bool = False):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.debug = debug
+        self.debug1 = debug1
         
-        # Initialize with random weights - 0.5 
+        # Initialize with random weights - 0.5
         self.W1 = Matrix(self.hidden_size, self.input_size, rand = True) - 0.5
         self.b1 = Matrix(self.hidden_size, 1, rand = True) - 0.5
         self.W2 = Matrix(self.output_size, self.hidden_size, rand = True) - 0.5
@@ -73,6 +77,11 @@ struct SimpleNN:
         var m = X_train.width
         
         for epoch in range(epochs):
+            if epoch == 16 or epoch == 17: # enable debugging for epochs
+                self.debug1 = True
+                print("DEBUGGING on epoch", epoch, " started")
+                print("=====================================")
+
             # Forward propagation
             var A2 = self.forward(X_train)
             
@@ -82,23 +91,17 @@ struct SimpleNN:
             
             # Update parameters
             self.update_params(dW1, db1, dW2, db2, learning_rate)
-            
+
             if self.debug and epoch % 10 == 0:
                 var predictions = self.get_predictions(A2)
                 var accuracy = self.get_accuracy(predictions, Y_train)
-                print("=====================================")
-                print("Layer 1")
-                print("Weights")
-                print(self.W1[:5,:5])
-                print("Biases")
-                print(self.b1[:5,:])
-                print("Layer 2")
-                print("Weights")
-                print(self.W2[:5,:5])
-                print("Biases")
-                print(self.b2[:5,:])
                 print("Epoch:", epoch, "Accuracy:", accuracy)
+
+
+            if self.debug1:
+                print("DEBUGGING on epoch", epoch, " ended")
                 print("=====================================")
+                self.debug1 = False
 
     fn predict(inout self, X: Matrix) raises -> Matrix:
         var A2 = self.forward(X)
