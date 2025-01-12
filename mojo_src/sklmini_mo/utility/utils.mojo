@@ -1,30 +1,11 @@
 from collections import InlinedFixedVector, Dict
-from memory import memset_zero
+from memory import memset_zero, UnsafePointer
 import math
 from sklmini_mo.utility.matrix import Matrix
 from python import Python, PythonObject
 from sys import bitwidthof
 from bit import count_leading_zeros
-from utils import Span
 from algorithm import parallelize
-
-# Cross Validation y as Matrix
-trait CVM:
-    fn __init__(inout self, params: Dict[String, String]) raises:
-        ...
-    fn fit(inout self, X: Matrix, y: Matrix) raises:
-        ...
-    fn predict(self, X: Matrix) raises -> Matrix:
-        ...
-
-# Cross Validation y as PythonObject
-trait CVP:
-    fn __init__(inout self, params: Dict[String, String]) raises:
-        ...
-    fn fit(inout self, X: Matrix, y: PythonObject) raises:
-        ...
-    fn predict(self, X: Matrix) raises -> List[String]:
-        ...
 
 @always_inline
 fn eliminate(r1: Matrix, inout r2: Matrix, col: Int, target: Int = 0) raises:
@@ -51,105 +32,6 @@ fn gauss_jordan(owned a: Matrix) raises -> Matrix:
 
 fn cov_value(x: Matrix, y: Matrix) raises -> Float64:
     return ((y - y.mean()).ele_mul(x - x.mean())).sum() / (x.size - 1)
-
-# ===----------------------------------------------------------------------===#
-# partition
-# ===----------------------------------------------------------------------===#
-
-@always_inline
-fn _estimate_initial_height(size: Int) -> Int:
-    # Compute the log2 of the size rounded upward.
-    var log2 = int(
-        (bitwidthof[DType.index]() - 1) ^ count_leading_zeros(size | 1)
-    )
-    # The number 1.3 was chosen by experimenting the max stack size for random
-    # input. This also depends on insertion_sort_threshold
-    return max(2, int(math.ceil(1.3 * log2)))
-
-@value
-struct _SortWrapper[type: CollectionElement](CollectionElement):
-    var data: type
-
-    fn __init__(inout self, *, other: Self):
-        self.data = other.data
-
-
-@always_inline
-fn _partition[
-    type: CollectionElement,
-    lifetime: MutableLifetime, //,
-    cmp_fn: fn (_SortWrapper[type], _SortWrapper[type]) capturing -> Bool,
-](span: Span[type, lifetime], inout indices: InlinedFixedVector[Int]) -> Int:
-    var size = len(span)
-    if size <= 1:
-        return 0
-
-    var array = span.unsafe_ptr()
-    var pivot = size // 2
-
-    var pivot_value = array[pivot]
-
-    var left = 0
-    var right = size - 2
-
-    swap(array[pivot], array[size - 1])
-    indices[pivot], indices[size - 1] = indices[size - 1], indices[pivot]
-
-    while left < right:
-        if cmp_fn(array[left], pivot_value):
-            left += 1
-        elif not cmp_fn(array[right], pivot_value):
-            right -= 1
-        else:
-            swap(array[left], array[right])
-            indices[left], indices[right] = indices[right], indices[left]
-
-    if cmp_fn(array[right], pivot_value):
-        right += 1
-    swap(array[size - 1], array[right])
-    indices[size - 1], indices[right] = indices[right], indices[size - 1]
-    
-    return right
-
-
-fn _partition[
-    type: CollectionElement,
-    lifetime: MutableLifetime, //,
-    cmp_fn: fn (_SortWrapper[type], _SortWrapper[type]) capturing -> Bool,
-](owned span: Span[type, lifetime], inout indices: InlinedFixedVector[Int], owned k: Int):
-    while True:
-        var pivot = _partition[cmp_fn](span, indices)
-        if pivot == k:
-            return
-        elif k < pivot:
-            span._len = pivot
-            span = span[:pivot]
-        else:
-            span._data += pivot + 1
-            span._len -= pivot + 1
-            k -= pivot + 1
-
-
-fn partition[
-    lifetime: MutableLifetime, //,
-    cmp_fn: fn (Float64, Float64) capturing -> Bool,
-](span: Span[Float64, lifetime], inout indices: InlinedFixedVector[Int], k: Int):
-    """Partition the input buffer inplace such that first k elements are the
-    largest (or smallest if cmp_fn is < operator) elements.
-    The ordering of the first k elements is undefined.
-
-    Parameters:
-        lifetime: Lifetime of span.
-        cmp_fn: Comparison functor of (type, type) capturing -> Bool type.
-    """
-
-    @parameter
-    fn _cmp_fn(lhs: _SortWrapper[Float64], rhs: _SortWrapper[Float64]) -> Bool:
-        return cmp_fn(lhs.data, rhs.data)
-
-    _partition[_cmp_fn](span, indices, k)
-
-# ===----------------------------------------------------------------------===#
 
 @always_inline
 fn euclidean_distance(x1: Matrix, x2: Matrix) raises -> Float64:
