@@ -1,5 +1,5 @@
 from sklmini_mo.utility.matrix import Matrix
-from sklmini_mo.utility.utils import CVM, cartesian_product, ids_to_numpy
+from sklmini_mo.utility.utils import cartesian_product, ids_to_numpy
 from algorithm import parallelize
 from sys import num_performance_cores
 from collections import Dict
@@ -116,16 +116,3 @@ fn train_test_split(X: Matrix, y: PythonObject, *, random_state: Int, test_size:
     var ids = Matrix.rand_choice(X.height, X.height, False, random_state)
     var split_i = int(X.height - (test_ratio * X.height))
     return X[ids[:split_i]], X[ids[split_i:]], SplittedPO(y[ids_to_numpy(ids[:split_i])], y[ids_to_numpy(ids[split_i:])])
-
-fn KFold[m_type: CVM](inout model: m_type, X: Matrix, y: Matrix, scoring: fn(Matrix, Matrix) raises -> Float64, n_splits: Int = 5) raises -> Float64:
-    var ids = Matrix.rand_choice(X.height, X.height, False)
-    var test_count = int((1 / n_splits) * X.height)
-    var start_of_test = 0
-    var mean_score: Float64 = 0.0
-    for _ in range(n_splits):
-        var end_of_test = min(start_of_test + test_count, X.height)
-        model.fit(X[ids[end_of_test:] + ids[:start_of_test]], y[ids[end_of_test:] + ids[:start_of_test]])
-        y_pred = model.predict(X[ids[start_of_test:end_of_test]])
-        mean_score += scoring(y[ids[start_of_test:end_of_test]], y_pred) / n_splits
-        start_of_test += test_count
-    return mean_score

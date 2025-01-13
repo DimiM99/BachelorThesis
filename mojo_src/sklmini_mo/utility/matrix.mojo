@@ -3,7 +3,7 @@ from memory import memcpy, memcmp, memset_zero, UnsafePointer
 from algorithm import vectorize, parallelize
 from buffer import Buffer, NDBuffer, DimList
 from algorithm.reduction import sum, cumsum, variance
-from collections import InlinedFixedVector, Dict
+from collections import InlinedFixedVector, Dict, Optional
 import math
 import random
 from random import random_float64
@@ -71,6 +71,15 @@ struct Matrix(Stringable, Writable):
                     self.store[1](i, j, atof(values[j]).cast[DType.float64]())
         else:
             raise Error('Error: Matrix is not initialized in the correct form!')
+
+    @staticmethod
+    fn rand(height: Int, width: Int) -> Matrix:
+        var mat = Matrix(height, width)
+        @parameter
+        fn random_init_mat(index: Int):
+            mat.data[index] = random_float64()
+        parallelize[random_init_mat](mat.size, num_logical_cores())
+        return mat^
 
     fn __copyinit__(out self, other: Self):
         self.height = other.height
@@ -1175,6 +1184,88 @@ struct Matrix(Stringable, Writable):
                 parallelize[p1](self.height, num_logical_cores())
         return mat^
 
+    fn argmin(self, axis: Optional[Int] = None) raises -> Matrix:
+        if axis == None:
+            var min_val = self.data[0]
+            var min_idx = 0
+            for i in range(self.size):
+                if self.data[i] < min_val:
+                    min_val = self.data[i]
+                    min_idx = i
+            var result = Matrix(1, 2)
+            result[0, 0] = Float64(min_idx // self.width)
+            result[0, 1] = Float64(min_idx % self.width)
+            return result
+            
+        elif axis == 0:  # Along columns
+            var result = Matrix(1, self.width)
+            for j in range(self.width):
+                var min_val = self[0, j]
+                var min_idx = 0
+                for i in range(self.height):
+                    if self[i, j] < min_val:
+                        min_val = self[i, j]
+                        min_idx = i
+                result[0, j] = Float64(min_idx)
+            return result
+            
+        elif axis == 1:  # Along rows
+            var result = Matrix(self.height, 1)
+            for i in range(self.height):
+                var min_val = self[i, 0]
+                var min_idx = 0
+                for j in range(self.width):
+                    if self[i, j] < min_val:
+                        min_val = self[i, j]
+                        min_idx = j
+                result[i, 0] = Float64(min_idx)
+            return result
+            
+        else:
+            raise Error("Axis must be None, 0, or 1")
+
+    fn argmax(self, axis: Optional[Int] = None) raises -> Matrix:
+        if axis == None:
+            var max_val = self.data[0]
+            var max_idx = 0
+            @parameter
+            fn p(i: Int):
+                if self.data[i] > max_val:
+                    max_val = self.data[i]
+                    max_idx = i
+            parallelize[p](self.size, num_logical_cores())
+            var result = Matrix(1, 2)
+            result[0, 0] = Float64(max_idx // self.width)
+            result[0, 1] = Float64(max_idx % self.width)
+            return result
+            
+        elif axis == 0:  # Along columns
+            var result = Matrix(1, self.width)
+            for j in range(self.width):
+                var max_val = self[0, j]
+                var max_idx = 0
+                for i in range(self.height):
+                    if self[i, j] > max_val:
+                        max_val = self[i, j]
+                        max_idx = i
+                result[0, j] = Float64(max_idx)
+            return result
+            
+        elif axis == 1:  # Along rows
+            var result = Matrix(self.height, 1)
+            for i in range(self.height):
+                var max_val = self[i, 0]
+                var max_idx = 0
+                for j in range(self.width):
+                    if self[i, j] > max_val:
+                        max_val = self[i, j]
+                        max_idx = j
+                result[i, 0] = Float64(max_idx)
+            return result
+            
+        else:
+            raise Error("Axis must be None, 0, or 1")
+
     @always_inline
     fn reshape(self, height: Int, width: Int) raises -> Matrix:
         """Reshape with one dimension automatically calculated."""
@@ -1550,14 +1641,14 @@ struct Matrix(Stringable, Writable):
         if self.size < 262144:
             @parameter
             fn scalar_vectorize[simd_width: Int](idx: Int):
-                mat.data.store[width=simd_width](idx, func[DType.float64, simd_width](self.data.load[width=simd_width](idx), rhs))
+                mat.data.store(idx, func[DType.float64, simd_width](self.data.load[width=simd_width](idx), rhs))
             vectorize[scalar_vectorize, self.simd_width](self.size)
         else:
             var n_vects = int(math.ceil(self.size / self.simd_width))
             @parameter
             fn scalar_vectorize_parallelize(i: Int):
                 var idx = i * self.simd_width
-                mat.data.store[width=self.simd_width](idx, func[DType.float64, self.simd_width](self.data.load[width=self.simd_width](idx), rhs))
+                mat.data.store(idx, func[DType.float64, self.simd_width](self.data.load[width=self.simd_width](idx), rhs))
             parallelize[scalar_vectorize_parallelize](n_vects, num_logical_cores())
         return mat^
 
