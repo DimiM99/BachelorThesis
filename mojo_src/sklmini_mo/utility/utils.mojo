@@ -1,5 +1,5 @@
 from collections import InlinedFixedVector, Dict
-from memory import memset_zero, UnsafePointer
+from memory import memset_zero, UnsafePointer, Span
 import math
 from sklmini_mo.utility.matrix import Matrix
 from python import Python, PythonObject
@@ -29,6 +29,99 @@ fn gauss_jordan(owned a: Matrix) raises -> Matrix:
     for i in range(a.height):
         eliminate(a[i], a[i], i, target=1)
     return a^
+
+# ===----------------------------------------------------------------------===#
+# partition
+# ===----------------------------------------------------------------------===#
+
+@value
+struct _SortWrapper[type: CollectionElement](CollectionElement):
+    var data: type
+
+    @implicit
+    fn __init__(out self, data: type):
+        self.data = data
+
+    fn __init__(out self, *, other: Self):
+        self.data = other.data
+
+
+@always_inline
+fn _partition[
+    type: CollectionElement,
+    origin: MutableOrigin, //,
+    cmp_fn: fn (_SortWrapper[type], _SortWrapper[type]) capturing [_] -> Bool,
+](span: Span[type, origin], mut indices: InlinedFixedVector[Int]) -> Int:
+    var size = len(span)
+    if size <= 1:
+        return 0
+
+    var array = span.unsafe_ptr()
+    var pivot = size // 2
+
+    var pivot_value = array[pivot]
+
+    var left = 0
+    var right = size - 2
+
+    swap(array[pivot], array[size - 1])
+    indices[pivot], indices[size - 1] = indices[size - 1], indices[pivot]
+
+    while left < right:
+        if cmp_fn(array[left], pivot_value):
+            left += 1
+        elif not cmp_fn(array[right], pivot_value):
+            right -= 1
+        else:
+            swap(array[left], array[right])
+            indices[left], indices[right] = indices[right], indices[left]
+
+    if cmp_fn(array[right], pivot_value):
+        right += 1
+    swap(array[size - 1], array[right])
+    indices[size - 1], indices[right] = indices[right], indices[size - 1]
+    
+    return right
+
+
+fn _partition[
+    type: CollectionElement,
+    origin: MutableOrigin, //,
+    cmp_fn: fn (_SortWrapper[type], _SortWrapper[type]) capturing [_] -> Bool,
+](owned span: Span[type, origin], mut indices: InlinedFixedVector[Int], owned k: Int):
+    while True:
+        var pivot = _partition[cmp_fn](span, indices)
+        if pivot == k:
+            return
+        elif k < pivot:
+            span._len = pivot
+            span = span[:pivot]
+        else:
+            span._data += pivot + 1
+            span._len -= pivot + 1
+            k -= pivot + 1
+
+
+fn partition[
+    lifetime: MutableOrigin, //,
+    cmp_fn: fn (Float64, Float64) capturing [_] -> Bool,
+](span: Span[Float64, lifetime], mut indices: InlinedFixedVector[Int], k: Int):
+    """Partition the input buffer inplace such that first k elements are the
+    largest (or smallest if cmp_fn is < operator) elements.
+    The ordering of the first k elements is undefined.
+
+    Parameters:
+        lifetime: Lifetime of span.
+        cmp_fn: Comparison functor of (type, type) capturing -> Bool type.
+    """
+
+    @parameter
+    fn _cmp_fn(lhs: _SortWrapper[Float64], rhs: _SortWrapper[Float64]) -> Bool:
+        return cmp_fn(lhs.data, rhs.data)
+
+    _partition[_cmp_fn](span, indices, k)
+
+# ===----------------------------------------------------------------------===#
 
 fn cov_value(x: Matrix, y: Matrix) raises -> Float64:
     return ((y - y.mean()).ele_mul(x - x.mean())).sum() / (x.size - 1)
