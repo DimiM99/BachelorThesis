@@ -1,7 +1,7 @@
 from collections import InlinedFixedVector, Dict
-from utils import Span
+from memory import Span
 from sklmini_mo.utility.matrix import Matrix
-from sklmini_mo.utility.utils import euclidean_distance, manhattan_distance, le, CVP, partition
+from sklmini_mo.utility.utils import euclidean_distance, manhattan_distance, le, partition
 
 struct KNN:
     var k: Int
@@ -40,10 +40,10 @@ struct KNN:
             
         # Sort distances such that first k elements are smallest
         partition[le](
-            Span[Float64, __lifetime_of(distances)](
-                unsafe_ptr= distances.data, 
-                len= distances.size
-            ), 
+            Span[Float64, __origin_of(distances)](
+                ptr = distances.data, 
+                length = distances.size
+            ),        
             dis_indices, 
             self.k
         )

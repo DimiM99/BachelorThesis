@@ -27,10 +27,10 @@ struct SimpleNN:
         self.debug1 = debug1
         
         # Initialize with random weights - 0.5
-        self.W1 = Matrix(self.hidden_size, self.input_size, rand = True) - 0.5
-        self.b1 = Matrix(self.hidden_size, 1, rand = True) - 0.5
-        self.W2 = Matrix(self.output_size, self.hidden_size, rand = True) - 0.5
-        self.b2 = Matrix(self.output_size, 1, rand = True) - 0.5
+        self.W1 = Matrix.rand(self.hidden_size, self.input_size) - 0.5
+        self.b1 = Matrix.rand(self.hidden_size, 1) - 0.5
+        self.W2 = Matrix.rand(self.output_size, self.hidden_size) - 0.5
+        self.b2 = Matrix.rand(self.output_size, 1) - 0.5
         
         # Initialize intermediate state matrices
         self.Z1 = Matrix(0,0)

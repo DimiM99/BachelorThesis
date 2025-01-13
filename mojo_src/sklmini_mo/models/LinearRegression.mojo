@@ -1,10 +1,10 @@
 from sklmini_mo.utility.matrix import Matrix
-from sklmini_mo.utility.utils import CVM, sign, mse
+from sklmini_mo.utility.utils import sign, mse
 from collections import Dict
 import math
 import time
 
-struct LinearRegression(CVM):
+struct LinearRegression():
     var lr: Float64
     var n_iters: Int
     var penalty: String
