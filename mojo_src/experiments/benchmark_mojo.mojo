@@ -1,4 +1,4 @@
-from time import now
+from time import perf_counter_ns
 from python import Python, PythonObject
 from sklmini_mo.utility.matrix import Matrix
 from sklmini_mo.utility.utils import accuracy_score, r2_score, mse
@@ -71,14 +71,14 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
             reg_alpha=0.1,
         )
         
-        var fit_start = now()
+        var fit_start = perf_counter_ns()
         model.fit(datasets.california.X_train, datasets.california.y_train)
-        var fit_time = (now() - fit_start) / 1e9
+        var fit_time = (perf_counter_ns() - fit_start) / 1e9
         results.california_lr.fit_times.append(fit_time)
         
-        var predict_start = now()
+        var predict_start = perf_counter_ns()
         var y_pred = model.predict(datasets.california.X_test)
-        var predict_time = (now() - predict_start) / 1e9
+        var predict_time = (perf_counter_ns() - predict_start) / 1e9
         results.california_lr.predict_times.append(predict_time)
         
         var mse_val = mse(datasets.california.y_test, y_pred)
@@ -97,14 +97,14 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
             reg_alpha=0.1,
         )
         
-        var fit_start = now()
+        var fit_start = perf_counter_ns()
         model.fit(datasets.diabetes.X_train, datasets.diabetes.y_train)
-        var fit_time = (now() - fit_start) / 1e9
+        var fit_time = (perf_counter_ns() - fit_start) / 1e9
         results.diabetes_lr.fit_times.append(fit_time)
         
-        var predict_start = now()
+        var predict_start = perf_counter_ns()
         var y_pred = model.predict(datasets.diabetes.X_test)
-        var predict_time = (now() - predict_start) / 1e9
+        var predict_time = (perf_counter_ns() - predict_start) / 1e9
         results.diabetes_lr.predict_times.append(predict_time)
         
         var mse_val = mse(datasets.diabetes.y_test, y_pred)
@@ -119,14 +119,14 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
         print("Run", i + 1, "of", n_runs)
         var model = KNN(k=3)
         
-        var fit_start = now()
+        var fit_start = perf_counter_ns()
         model.fit(datasets.iris.X_train, datasets.iris.y_train)
-        var fit_time = (now() - fit_start) / 1e9
+        var fit_time = (perf_counter_ns() - fit_start) / 1e9
         results.iris_knn.fit_times.append(fit_time)
         
-        var predict_start = now()
+        var predict_start = perf_counter_ns()
         var y_pred = model.predict(datasets.iris.X_test)
-        var predict_time = (now() - predict_start) / 1e9
+        var predict_time = (perf_counter_ns() - predict_start) / 1e9
         results.iris_knn.predict_times.append(predict_time)
         
         var acc = accuracy_score(datasets.iris.y_test, y_pred)
@@ -139,14 +139,14 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
         print("Run", i + 1, "of", n_runs)
         var model = KNN(k=3)
         
-        var fit_start = now()
+        var fit_start = perf_counter_ns()
         model.fit(datasets.cancer.X_train, datasets.cancer.y_train)
-        var fit_time = (now() - fit_start) / 1e9
+        var fit_time = (perf_counter_ns() - fit_start) / 1e9
         results.cancer_knn.fit_times.append(fit_time)
         
-        var predict_start = now()
+        var predict_start = perf_counter_ns()
         var y_pred = model.predict(datasets.cancer.X_test)
-        var predict_time = (now() - predict_start) / 1e9
+        var predict_time = (perf_counter_ns() - predict_start) / 1e9
         results.cancer_knn.predict_times.append(predict_time)
         
         var acc = accuracy_score(datasets.cancer.y_test, y_pred)
@@ -159,14 +159,14 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
         print("Run", i + 1, "of", n_runs)
         var model = KMeans(K=3)  # Wine dataset has 3 classes
         
-        var fit_start = now()
+        var fit_start = perf_counter_ns()
         var labels = model.predict(datasets.wine.X_train)
-        var fit_time = (now() - fit_start) / 1e9
+        var fit_time = (perf_counter_ns() - fit_start) / 1e9
         results.wine_kmeans.fit_times.append(fit_time)
         
-        var predict_start = now()
+        var predict_start = perf_counter_ns()
         var test_labels = model.predict(datasets.wine.X_test)
-        var predict_time = (now() - predict_start) / 1e9
+        var predict_time = (perf_counter_ns() - predict_start) / 1e9
         results.wine_kmeans.predict_times.append(predict_time)
         
         var inertia = calculate_inertia(datasets.wine.X_train, labels, model.centroids)
@@ -179,15 +179,15 @@ fn run_benchmarks(n_runs: Int = 5) raises -> BenchmarkResults:
         print("Run", i + 1, "of", n_runs)
         var model = SimpleNN(input_size=784, hidden_size=10, output_size=10, debug=True)
         
-        var fit_start = now()
+        var fit_start = perf_counter_ns()
         model.fit(datasets.mnist.X_train, datasets.mnist.y_train, 
                  learning_rate=0.1, epochs=500)
-        var fit_time = (now() - fit_start) / 1e9
+        var fit_time = (perf_counter_ns() - fit_start) / 1e9
         results.mnist_simplenn.fit_times.append(fit_time)
         
-        var predict_start = now()
+        var predict_start = perf_counter_ns()
         var accuracy = model.evaluate(datasets.mnist.X_test, datasets.mnist.y_test)
-        var predict_time = (now() - predict_start) / 1e9
+        var predict_time = (perf_counter_ns() - predict_start) / 1e9
         results.mnist_simplenn.predict_times.append(predict_time)
         
         if i == 0:  # Store metrics from first run
