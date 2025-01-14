@@ -102,7 +102,7 @@ struct KMeans():
         var distances = Matrix(centroids.height, 1)
         for i in range(centroids.height):
             distances.data[i] = euclidean_distance(sample, centroids[i])
-        return distances.argmin()
+        return distances.argmin(axis=1)[0, 0].cast[DType.int32]().value
 
     @always_inline
     fn _get_centroids(self, clusters: List[List[Int]]) raises -> Matrix:
