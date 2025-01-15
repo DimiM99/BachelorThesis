@@ -4,6 +4,7 @@
 
 # data
 mnist.csv
+mnist.mojotensor
 
 # python
 .ipynb_checkpoints/
