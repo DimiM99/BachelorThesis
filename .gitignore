@@ -4,3 +4,7 @@
 
 # data
 mnist.csv
+
+# python
+.ipynb_checkpoints/
+__pycache__/
