@@ -80,7 +80,21 @@ struct SimpleNN:
     @staticmethod
     fn softmax(Z: Tensor[DType.float64]) raises -> Tensor[DType.float64]:
         var exp_Z = Self._exp_tensor(Z)
-        return exp_Z / Self._sum_tensor(exp_Z, axis=0, keepdim=True)
+        var sums = Self._sum_tensor(exp_Z, axis=0, keepdim=True)
+        var shape = Z.shape()
+        var result = Tensor[DType.float64](shape)
+        if shape[1] < 768:
+            for i in range(shape[0]):
+                for j in range(shape[1]):
+                    result[i * shape[1] + j] = exp_Z[i * shape[1] + j] / sums[j]
+        else:
+            @parameter
+            fn normalize(idx: Int):
+                var i = idx // shape[1]
+                var j = idx % shape[1]
+                result[i * shape[1] + j] = exp_Z[i * shape[1] + j] / sums[j] 
+            parallelize[normalize](Z.num_elements(), num_logical_cores())
+        return result^
 
     @staticmethod
     fn one_hot(Y: Tensor[DType.float64]) -> Tensor[DType.float64]:
@@ -103,9 +117,11 @@ struct SimpleNN:
         mut self, 
         X: Tensor[DType.float64]
     ) raises -> Tensor[DType.float64]:
-        self.Z1 = self.W1 * X + self.b1
+        self.Z1 = Self._matmul(self.W1, X)
+        self.add_broadcast(self.Z1, self.b1)
         self.A1 = Self.relu(self.Z1)
-        self.Z2 = self.W2 * self.A1 + self.b2
+        self.Z2 = Self._matmul(self.W2, self.A1)
+        self.add_broadcast(self.Z2, self.b2)
         self.A2 = Self.softmax(self.Z2)
         return self.A2
 
@@ -115,12 +131,12 @@ struct SimpleNN:
         Y: Tensor[DType.float64],
         m: Int
     ) raises -> (Tensor[DType.float64], Tensor[DType.float64], Tensor[DType.float64], Tensor[DType.float64]):
-        var one_hot_Y = Self.one_hot(Y)
+        var one_hot_Y = Self._transpose_tensor(Self.one_hot(Y)) 
         var dZ2 = self.A2 - one_hot_Y
-        var dW2 = 1 / m * dZ2 * Self._transpose_tensor(self.A1)
+        var dW2 = 1 / m * Self._matmul(dZ2, Self._transpose_tensor(self.A1))
         var db2 = 1 / m * Self._sum_tensor(dZ2, axis = 1, keepdim = True)
-        var dZ1 = Self._transpose_tensor(self.W2) * dZ2 * Self.relu_deriv(self.Z1)
-        var dW1 = 1 / m * dZ1 * Self._transpose_tensor(X)
+        var dZ1 = Self._matmul(Self._transpose_tensor(self.W2), dZ2) * Self.relu_deriv(self.Z1)
+        var dW1 = 1 / m * Self._matmul(dZ1, Self._transpose_tensor(X))
         var db1 = 1/ m * Self._sum_tensor(dZ1, axis = 1, keepdim = True)
         return dW1, db1, dW2, db2
 
@@ -199,14 +215,11 @@ struct SimpleNN:
         for epoch in range(epochs):
             # Forward propagation
             var A2 = self.forward(X_train)
-            
             # Backward propagation
             var bp_r = self.backward(X_train, Y_train, m)
             dW1, db1, dW2, db2 = bp_r
-        
             # Update parameters
             self.update_params(dW1, db1, dW2, db2, learning_rate)
-            
             if self.debug and epoch % 10 == 0:
                 var predictions = self.get_predictions(A2)
                 var accuracy = self.get_accuracy(predictions, Y_train)
@@ -347,3 +360,43 @@ struct SimpleNN:
                 result[VariadicList(j, i)] = x[i, j]
             parallelize[transpose_parallel](shape[0] * shape[1], num_logical_cores())
         return result^
+
+    @staticmethod
+    fn _matmul(A: Tensor[DType.float64], B: Tensor[DType.float64]) -> Tensor[DType.float64]:
+        var m = A.shape()[0]
+        var k = A.shape()[1]
+        var n = B.shape()[1]
+        var result = Tensor[DType.float64](TensorShape(m, n))
+        if m * n < 768:
+            for i in range(m):
+                for j in range(n):
+                    var sum: Float64 = 0.0
+                    for p in range(k):
+                        sum += A[i * k + p] * B[p * n + j]
+                    result[i * n + j] = sum
+        else:
+            @parameter
+            fn compute_element(idx: Int):
+                var i = idx // n
+                var j = idx % n
+                var sum: Float64 = 0.0
+                for p in range(k):
+                    sum += A[i * k + p] * B[p * n + j]
+                result[i * n + j] = sum  
+            parallelize[compute_element](m * n, num_logical_cores())
+        return result^
+
+    @staticmethod
+    fn add_broadcast(inout matrix: Tensor[DType.float64], bias: Tensor[DType.float64]):
+        var shape = matrix.shape()
+        if matrix.num_elements() < 768:
+            for i in range(shape[0]):
+                for j in range(shape[1]):
+                    matrix[i * shape[1] + j] += bias[i]
+        else:
+            @parameter
+            fn add_bias(idx: Int):
+                var i = idx // shape[1]
+                var j = idx % shape[1]
+                matrix[i * shape[1] + j] += bias[i]     
+            parallelize[add_bias](matrix.num_elements(), num_logical_cores())
