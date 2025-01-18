@@ -10,3 +10,4 @@ data
 # python
 .ipynb_checkpoints/
 __pycache__/
+py_src/model_weights.npy
