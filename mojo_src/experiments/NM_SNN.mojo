@@ -4,6 +4,7 @@ import numojo as nm
 
 from algorithm import vectorize, parallelize
 from sys.info import simdwidthof, num_logical_cores
+from memory import memcpy
 
 from algorithm.reduction import sum, max
 from buffer import Buffer, NDBuffer, DimList
@@ -34,7 +35,7 @@ struct MN_SimpleNN:
         input_size: Int = 784,
         hidden_size: Int = 10,
         output_size: Int = 10,
-        num_of_observations: Int = 42000,
+        num_of_observations: Int = 41000,
         debug: Bool = False
     ) raises :
         self.input_size = input_size
@@ -50,10 +51,10 @@ struct MN_SimpleNN:
         self.b2 = nm.random.randn(self.output_size, 1)
 
         # Initialize activations and linear combinations
-        self.Z1 = nm.random.randn(self.hidden_size, self.num_of_observations)
-        self.A1 = nm.random.randn(self.hidden_size, self.num_of_observations)
-        self.Z2 = nm.random.randn(self.output_size, self.num_of_observations)
-        self.A2 = nm.random.randn(self.output_size, self.num_of_observations)
+        self.Z1 = nm.random.randn(self.hidden_size, num_of_observations)
+        self.A1 = nm.random.randn(self.hidden_size, num_of_observations)
+        self.Z2 = nm.random.randn(self.output_size, num_of_observations)
+        self.A2 = nm.random.randn(self.output_size, num_of_observations)
 
     @staticmethod
     fn relu(Z: NDArray[DType.float64]) -> NDArray[DType.float64]:
@@ -88,15 +89,19 @@ struct MN_SimpleNN:
             except:
                 pass
         parallelize[one_hot_parallel](num_samples, num_logical_cores())
-        return result
+        return result.T()
 
     fn forward(
         mut self,
         X: NDArray[DType.float64]
     ) raises -> NDArray[DType.float64]:
-        self.Z1 = nm.math.add(self.W1.mdot(X), self.b1)
+        var x1w = ndarray_mul(self.W1, X)
+        var w1b = broadcast_to(self.b1, self.Z1.shape)
+        self.Z1 = x1w + w1b
         self.A1 = Self.relu(self.Z1)
-        self.Z2 = nm.math.add(self.W2.mdot(self.A1), self.b2)
+        var w2a = ndarray_mul(self.W2, self.A1)
+        var w2b = broadcast_to(self.b2, self.Z2.shape)
+        self.Z2 = w2a + w2b
         self.A2 = Self.softmax(self.Z2)
         return self.A2
 
@@ -108,11 +113,11 @@ struct MN_SimpleNN:
     ) raises -> (NDArray[DType.float64], NDArray[DType.float64], NDArray[DType.float64], NDArray[DType.float64]):
         var one_hot_Y = self.one_hot(Y)
         var dZ2 = self.A2 - one_hot_Y
-        var dW2 = 1.0 / m * dZ2.mdot(self.A1.T())
-        var db2 = 1.0 / m * nm.math.sum(dZ2, 1)
-        var dZ1 = self.W2.T().mdot(dZ2) * self.relu_deriv(self.Z1)
-        var dW1 = 1.0 / m * dZ1.mdot(X.T())
-        var db1 = 1.0 / m * nm.math.sum(dZ1, 1)
+        var dW2 = nm.math.mul(1.0 / m, ndarray_mul(dZ2, self.A1.T()))
+        var db2 = nm.math.mul(1.0 / m, nm.math.sum(dZ2, 0))
+        var dZ1 = ndarray_mul(self.W2.T(), dZ2) * self.relu_deriv(self.Z1)
+        var dW1 = nm.math.mul(1.0 / m, ndarray_mul(dZ1, X.T()))
+        var db1 = nm.math.mul(1.0 / m, nm.math.sum(dZ1, 0))
         return dW1, db1, dW2, db2
 
     fn update_params(
@@ -123,10 +128,19 @@ struct MN_SimpleNN:
         db2: NDArray[DType.float64], 
         learning_rate: Float64
     ) raises:
-        self.W1 -= learning_rate * dW1
-        self.b1 -= learning_rate * db1
-        self.W2 -= learning_rate * dW2
-        self.b2 -= learning_rate * db2
+        print("Updating parameters...")
+        self.W1 = self.W1 - (learning_rate * dW1)
+        print("W1 shape", self.W1.shape)
+        print("--")
+        print("db1 shape", db1.shape)
+        print("b1 shape", self.b1.shape)
+        print("learning_rate * dw1", (learning_rate * db1).shape)
+        self.b1 = self.b1 - (learning_rate * db1)
+        print("b1 shape", self.b1.shape)
+        self.W2 = self.W2 - (learning_rate * dW2)
+        print("W2 shape", self.W2.shape)
+        self.b2 = self.b2 - (learning_rate * db2)
+        print("b2 shape", self.b2.shape)
 
     @staticmethod
     fn get_predictions(A2: NDArray[DType.float64]) raises -> NDArray[DType.float64]:
@@ -152,16 +166,20 @@ struct MN_SimpleNN:
         learning_rate: Float64 = 0.1, 
         epochs: Int = 100
     ) raises:
+        print("Training started...")
         for epoch in range(epochs):
             # Forward pass
             var A2 = self.forward(X_train)
-            
+            print("Forward pass done")
+
             # Backward pass
             var bp = self.backward(X_train, Y_train, X_train.shape[1])
             dW1, db1, dW2, db2 = bp
+            print("Backward pass done")
 
             # Update parameters
             self.update_params(dW1, db1, dW2, db2, learning_rate)
+            print("Parameters updated")
             
             # Optional: print debug information
             if self.debug and epoch % 10 == 0:
@@ -205,6 +223,67 @@ fn _max(z: NDArray[DType.float64]) -> Float64:
     except:
         return 0.0  
 
+fn ndarray_mul(
+    A: NDArray[DType.float64], 
+    B: NDArray[DType.float64]
+) raises -> NDArray[DType.float64]:
+    # Element-wise multiplication
+    if A.shape == B.shape:
+        return A * B
+    
+    # Matrix multiplication
+    if A.shape.ndim == 2 and B.shape.ndim == 2:
+        # Check if shapes are compatible for matrix multiplication
+        if A.shape[1] == B.shape[0]:
+            return A.mdot(B)
+    
+    # Broadcast multiplication
+    if A.shape.ndim == 1 and B.shape.ndim == 2:
+        # Reshape A in-place to a column vector if needed
+        var A_reshaped = A
+        if A.shape[0] != B.shape[0]:
+            A_reshaped.reshape(A.shape[0], 1)
+        return A_reshaped.mdot(B)
+    
+    if A.shape.ndim == 2 and B.shape.ndim == 1:
+        # Reshape B in-place to a column vector if needed
+        var B_reshaped = B
+        if B.shape[0] != A.shape[1]:
+            B_reshaped.reshape(B.shape[0], 1)
+        return A.mdot(B_reshaped)
+    
+    # If no matching multiplication method is found, raise an error
+    raise Error("Incompatible shapes for multiplication: " + 
+                str(A.shape) + " and " + str(B.shape))
+
+fn broadcast_to(
+    A: NDArray[DType.float64], 
+    shape: Shape
+) raises -> NDArray[DType.float64]:
+    # Create result array with target shape
+    var B = nm.creation.zeros(shape)
+    if (A.shape[0] == shape[0]) and (A.shape[1] == shape[1]):
+        # Exact shape match, just copy
+        memcpy(B._buf, A._buf, A.num_elements())
+    elif (A.shape[0] == 1) and (A.shape[1] == 1):
+        # Scalar broadcast
+        B.fill(A[0, 0].load(0))
+    elif (A.shape[0] == 1) and (A.shape[1] == shape[1]):
+        # Broadcast single row
+        for i in range(shape[0]):
+            memcpy(
+                B._buf.offset(shape[1] * i), 
+                A._buf, 
+                shape[1]
+            )
+    elif (A.shape[1] == 1) and (A.shape[0] == shape[0]):
+        # Broadcast single column
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                B[Idx(i, j)] = A[i, 0].load(0)
+    else:
+        raise Error("Cannot broadcast shape")
+    return B^
 
 fn read_file_content(file_path: String) raises -> String:
     var file = open(file_path, "r")
@@ -237,7 +316,6 @@ fn parse_csv(file_path: String, delimiter: String = ",", has_header: Bool = Fals
             try:
                 result[Idx(i - start_index, j)] = atof(row[j].strip())
             except:
-                # Optional: handle parsing errors (e.g., set to 0 or skip)
                 result[Idx(i - start_index, j)] = 0.0
     
     return result
@@ -248,12 +326,11 @@ fn prepare_data(data_path: String) raises -> (NDArray[DType.float64], NDArray[DT
     
     var data: NDArray[DType.float64]
     try:
-        data = parse_csv("mnist.csv")
+        data = parse_csv("mnist.csv", has_header=True)
         print("Dataset loaded from a local copy.")
     except:
         print("Dataset is not found. Downloading from the GCS Bucket... (may take a while)")
         data = parse_csv("https://storage.googleapis.com/mnist-test-mojo-ba/mnist.csv")
-        # In Python, this used to_csv, but we'll skip that for now
     
     var m = data.shape[0]
     var n = data.shape[1]
